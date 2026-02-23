@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>How-To: Create Folder and Message</title>
+  <link rel="stylesheet" href="../../assets/css/site.css" />
+</head>
+<body>
+  <main>
+<h1 id="how-to-create-folder-and-message">How-To: Create Folder and Message</h1>
+<h2 id="langkah">Langkah</h2>
+<ol>
+<li>Buka PST dengan writer (<code>PstInMemoryWriter</code> atau <code>PstNdbWriter</code>).</li>
+<li>Buat folder dengan <code>CreateFolder</code>.</li>
+<li>Buat draft pesan (<code>PstMessageDraft</code>).</li>
+<li>Tulis pesan dengan <code>CreateMessage</code>.</li>
+</ol>
+<h2 id="contoh">Contoh</h2>
+<pre><code class="language-csharp">using Emcode.Pst.Application;
+using Emcode.Pst.Domain;
+using Emcode.Pst.Infrastructure;
+
+var pst = PstFile.Open(@&quot;C:\data\mail.pst&quot;, new PstOpenOptions { ReadOnly = false }, writer: new PstInMemoryWriter());
+
+var folder = pst.CreateFolder(&quot;Import&quot;);
+var msg = pst.CreateMessage(folder, new PstMessageDraft
+{
+    Subject = &quot;Test&quot;,
+    Body = &quot;Halo PST&quot;
+});
+</code></pre>
+<h2 id="api-terkait">API Terkait</h2>
+<ul>
+<li><a href="../../api/Emcode.Pst.Application/PstFile.html">PstFile</a></li>
+<li><a href="../../api/Emcode.Pst.Domain/PstMessageDraft.html">PstMessageDraft</a></li>
+<li><a href="../../api/Emcode.Pst.Infrastructure/PstInMemoryWriter.html">PstInMemoryWriter</a></li>
+</ul>
+
+  </main>
+</body>
+</html>

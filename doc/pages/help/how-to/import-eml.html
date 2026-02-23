@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>How-To: Import EML</title>
+  <link rel="stylesheet" href="../../assets/css/site.css" />
+</head>
+<body>
+  <main>
+<h1 id="how-to-import-eml">How-To: Import EML</h1>
+<h2 id="langkah">Langkah</h2>
+<ol>
+<li>Buka PST dengan writer aktif.</li>
+<li>Panggil <code>ImportEml(folder, emlPath)</code>.</li>
+<li>Gunakan versi async untuk workflow I/O berat.</li>
+</ol>
+<h2 id="contoh">Contoh</h2>
+<pre><code class="language-csharp">using Emcode.Pst.Application;
+using Emcode.Pst.Infrastructure;
+
+var pst = PstFile.Open(@&quot;C:\data\mail.pst&quot;, new PstOpenOptions { ReadOnly = false }, writer: new PstInMemoryWriter());
+var target = pst.CreateFolder(&quot;EML Import&quot;);
+var message = pst.ImportEml(target, @&quot;C:\temp\sample.eml&quot;);
+</code></pre>
+<h2 id="api-terkait">API Terkait</h2>
+<ul>
+<li><a href="../../api/Emcode.Pst.Application/PstFile.html">PstFile</a></li>
+<li><a href="../../api/Emcode.Pst.Application.Abstractions/IPstWriter.html">IPstWriter</a></li>
+<li><a href="../../api/Emcode.Pst.Infrastructure/PstNdbWriter.html">PstNdbWriter</a></li>
+</ul>
+
+  </main>
+</body>
+</html>

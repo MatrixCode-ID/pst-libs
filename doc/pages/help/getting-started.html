@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Getting Started</title>
+  <link rel="stylesheet" href="../assets/css/site.css" />
+</head>
+<body>
+  <main>
+<h1 id="getting-started">Getting Started</h1>
+<h2 id="prasyarat">Prasyarat</h2>
+<ul>
+<li>.NET 10 SDK</li>
+<li>Referensi package <code>Emcode.Pst.Libs</code></li>
+</ul>
+<h2 id="quick-start-read">Quick Start (Read)</h2>
+<pre><code class="language-csharp">using Emcode.Pst.Application;
+
+var pst = PstFile.Open(@&quot;C:\data\mail.pst&quot;, new PstOpenOptions
+{
+    ReadOnly = true,
+    ValidateChecksums = false
+});
+
+foreach (var folder in pst.Folders)
+{
+    Console.WriteLine($&quot;{folder.Name}: {folder.Messages.Count}&quot;);
+}
+</code></pre>
+<h2 id="quick-start-async">Quick Start (Async)</h2>
+<pre><code class="language-csharp">using Emcode.Pst.Application;
+using System.Threading;
+
+using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+var pst = await PstFile.OpenAsync(@&quot;C:\data\mail.pst&quot;, cancellationToken: cts.Token);
+</code></pre>
+<h2 id="lanjutkan">Lanjutkan</h2>
+<ul>
+<li><a href="./concepts.html">Konsep Arsitektur</a></li>
+<li><a href="../api/Emcode.Pst.Application/PstFile.html">API: PstFile</a></li>
+</ul>
+
+  </main>
+</body>
+</html>

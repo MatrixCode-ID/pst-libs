@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>How-To: Open and Read PST</title>
+  <link rel="stylesheet" href="../../assets/css/site.css" />
+</head>
+<body>
+  <main>
+<h1 id="how-to-open-and-read-pst">How-To: Open and Read PST</h1>
+<h2 id="langkah">Langkah</h2>
+<ol>
+<li>Panggil <code>PstFile.Open</code> atau <code>PstFile.OpenAsync</code>.</li>
+<li>Gunakan <code>pst.Folders</code> untuk iterasi folder.</li>
+<li>Ambil <code>folder.Messages</code> untuk membaca pesan.</li>
+</ol>
+<h2 id="contoh">Contoh</h2>
+<pre><code class="language-csharp">using Emcode.Pst.Application;
+
+var pst = PstFile.Open(@&quot;C:\data\inbox.pst&quot;);
+
+foreach (var folder in pst.Folders)
+{
+    foreach (var message in folder.Messages)
+    {
+        Console.WriteLine(message.Subject);
+    }
+}
+</code></pre>
+<h2 id="api-terkait">API Terkait</h2>
+<ul>
+<li><a href="../../api/Emcode.Pst.Application/PstFile.html">PstFile</a></li>
+<li><a href="../../api/Emcode.Pst.Domain/PstFolder.html">PstFolder</a></li>
+<li><a href="../../api/Emcode.Pst.Domain/PstMessage.html">PstMessage</a></li>
+</ul>
+
+  </main>
+</body>
+</html>

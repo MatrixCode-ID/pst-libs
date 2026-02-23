@@ -24,6 +24,13 @@ Format mengikuti prinsip [Keep a Changelog](https://keepachangelog.com/en/1.1.0/
 ### Security
 - Belum ada.
 
+## [1.0.3] - 2026-02-23
+
+### Changed
+- Restrukturisasi dokumentasi `doc/pages` dari Markdown ke HTML5 statis.
+- Seluruh tautan internal dokumentasi diperbarui agar menggunakan ekstensi `.html`.
+- Penyempurnaan gaya tampilan dokumentasi pada `doc/pages/assets/css/site.css` untuk konsistensi desktop dan mobile.
+
 ## [1.0.2] - 2026-02-23
 
 ### Changed

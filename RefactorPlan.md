@@ -1,3 +1,54 @@
+## Plan 47 — 23 Feb 2026, 14:31
+Tanggal plan: 23 Feb 2026, 14:31
+
+**Ringkasan**
+Restrukturisasi `doc/pages` agar seluruh konten dokumentasi menggunakan format HTML5.
+
+**Sumber**
+- Permintaan user — 23 Feb 2026
+
+**Lingkup**
+- doc/pages/index.md
+- doc/pages/toc.md
+- doc/pages/help/**/*.md
+- doc/pages/api/**/*.md
+- doc/pages/index.html
+- doc/pages/assets/css/site.css
+
+**Rencana Prioritas**
+1. Inventarisasi semua file `.md` di bawah `doc/pages` dan tentukan pasangan target `.html` dengan struktur path yang sama.
+2. Konversi konten Markdown ke HTML5 statis (heading, paragraf, list, link, kode) sambil menjaga tautan antar halaman agar memakai ekstensi `.html`.
+3. Pastikan halaman root `doc/pages/index.html` menjadi landing utama dan menaut ke dokumen HTML hasil konversi.
+4. Rapikan styling di `doc/pages/assets/css/site.css` agar seluruh halaman HTML5 konsisten dan mudah dibaca di desktop/mobile.
+5. Hapus atau arsip file Markdown dari alur publish setelah semua tautan valid, sehingga artifact Pages sepenuhnya HTML5.
+6. Validasi cepat integritas link internal agar tidak ada referensi `.md` tersisa.
+
+**Kriteria Selesai**
+- Seluruh dokumen publish di `doc/pages` menggunakan file `.html`.
+- Tidak ada tautan internal yang masih mengarah ke `.md`.
+- Navigasi Help/API/TOC tetap berfungsi dari halaman landing.
+
+## Plan 46 — 23 Feb 2026, 14:28
+Tanggal plan: 23 Feb 2026, 14:28
+
+**Ringkasan**
+Memperbaiki error GitHub Pages karena artifact tidak memiliki `index.html` pada root `doc/pages`.
+
+**Sumber**
+- Permintaan user — 23 Feb 2026
+
+**Lingkup**
+- doc/pages/index.html
+
+**Rencana Prioritas**
+1. Tambahkan file `doc/pages/index.html` sebagai halaman landing statis agar valid untuk deployment GitHub Pages berbasis artifact.
+2. Isi halaman dengan navigasi ringkas ke dokumentasi Help, API, dan TOC yang sudah ada di `doc/pages`.
+3. Pertahankan struktur deployment existing (`.github/workflows/pages.yml`) tanpa perubahan karena akar masalah ada pada entry file yang hilang.
+
+**Kriteria Selesai**
+- `doc/pages/index.html` tersedia di root artifact.
+- Link utama dokumentasi dapat diakses dari halaman landing.
+
 ## Plan 45 — 23 Feb 2026, 14:06
 Tanggal plan: 23 Feb 2026, 14:06
 
