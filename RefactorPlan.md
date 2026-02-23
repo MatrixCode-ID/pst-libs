@@ -1,3 +1,31 @@
+## Plan 48 — 23 Feb 2026, 14:36
+Tanggal plan: 23 Feb 2026, 14:36
+
+**Ringkasan**
+Memperbarui layout GitHub Pages agar pengguna bisa memilih mode `Dark` atau `Light`.
+
+**Sumber**
+- Permintaan user — 23 Feb 2026
+
+**Lingkup**
+- doc/pages/assets/css/site.css
+- doc/pages/index.html
+- doc/pages/api/**/*.html
+- doc/pages/help/**/*.html
+- doc/pages/toc.html
+
+**Rencana Prioritas**
+1. Tambahkan token warna untuk dua tema (`light` dan `dark`) di CSS menggunakan custom properties.
+2. Tambahkan komponen toggle mode pada layout halaman (button/switch) yang konsisten di seluruh halaman dokumentasi.
+3. Simpan preferensi mode user di `localStorage` dan terapkan saat halaman dimuat.
+4. Gunakan fallback ke preferensi sistem (`prefers-color-scheme`) jika user belum memilih mode.
+5. Verifikasi kontras warna, keterbacaan, dan konsistensi elemen utama (heading, link, code block, table) pada kedua mode.
+
+**Kriteria Selesai**
+- Halaman docs memiliki kontrol untuk memilih `Dark`/`Light`.
+- Preferensi tema tersimpan dan persisten antar halaman.
+- Tampilan kedua mode tetap rapi dan readable di desktop/mobile.
+
 ## Plan 47 — 23 Feb 2026, 14:31
 Tanggal plan: 23 Feb 2026, 14:31
 

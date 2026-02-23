@@ -24,6 +24,16 @@ Format mengikuti prinsip [Keep a Changelog](https://keepachangelog.com/en/1.1.0/
 ### Security
 - Belum ada.
 
+## [1.0.4] - 2026-02-23
+
+### Added
+- Toggle mode `Dark`/`Light` pada seluruh halaman dokumentasi `doc/pages`.
+- Script terpusat `doc/pages/assets/js/theme.js` untuk persistensi tema berbasis `localStorage`.
+
+### Changed
+- Penyesuaian tema warna pada `doc/pages/assets/css/site.css` untuk dukungan light/dark yang konsisten.
+- Injeksi referensi script tema ke seluruh dokumen HTML pada `doc/pages`.
+
 ## [1.0.3] - 2026-02-23
 
 ### Changed

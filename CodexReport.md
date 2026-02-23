@@ -1,3 +1,51 @@
+## Laporan 145 — 23 Feb 2026, 14:38
+Tanggal laporan: 23 Feb 2026, 14:38
+
+**Ringkasan Pertanyaan**
+Meminta menjalankan Plan 48 untuk menambahkan pilihan mode `Dark` atau `Light` pada GitHub Pages.
+
+**Statement Jawaban**
+Plan 48 sudah dieksekusi.
+
+Perubahan yang dilakukan:
+- Menambahkan sistem tema `light/dark` berbasis CSS variables di `doc/pages/assets/css/site.css`.
+- Menambahkan style komponen toggle tema (`doc-theme-bar` dan `#doc-theme-toggle`) agar konsisten di seluruh halaman.
+- Menambahkan script tema terpusat `doc/pages/assets/js/theme.js` untuk:
+  - membaca preferensi user dari `localStorage`,
+  - fallback ke `prefers-color-scheme`,
+  - menyimpan preferensi mode,
+  - dan menambahkan tombol toggle ke dalam `<main>` secara otomatis.
+- Menyisipkan referensi script tema ke seluruh halaman HTML dokumentasi di `doc/pages`.
+
+Hasil:
+- Semua halaman docs sekarang mendukung mode `Dark` dan `Light`.
+- Preferensi mode persisten antar halaman.
+
+**File Terkait**
+- doc/pages/assets/css/site.css
+- doc/pages/assets/js/theme.js
+- doc/pages/**/*.html
+- CodexReport.md
+
+## Laporan 144 — 23 Feb 2026, 14:36
+Tanggal laporan: 23 Feb 2026, 14:36
+
+**Ringkasan Pertanyaan**
+Meminta update layout GitHub Pages agar bisa memilih mode dark atau light.
+
+**Statement Jawaban**
+Sesuai aturan project untuk perubahan code, saya menyiapkan plan refactor terlebih dahulu dan menunggu instruksi eksekusi.
+
+Tindakan yang dilakukan:
+- Menambahkan **Plan 48** di `RefactorPlan.md` untuk implementasi pemilih tema `Dark/Light`.
+- Plan mencakup update CSS token tema, komponen toggle, persistensi preferensi via `localStorage`, fallback `prefers-color-scheme`, dan validasi keterbacaan.
+
+Status: menunggu perintah user untuk menjalankan Plan 48.
+
+**File Terkait**
+- RefactorPlan.md
+- CodexReport.md
+
 ## Laporan 143 — 23 Feb 2026, 14:32
 Tanggal laporan: 23 Feb 2026, 14:32
 
