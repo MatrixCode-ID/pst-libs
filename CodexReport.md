@@ -1,3 +1,37 @@
+## Laporan 147 — 23 Feb 2026, 14:45
+Tanggal laporan: 23 Feb 2026, 14:45
+
+**Ringkasan Pertanyaan**
+Meminta build NuGet artifact untuk `src/Emcode.Pst.Libs/Emcode.Pst.Libs.csproj`.
+
+**Statement Jawaban**
+Build NuGet artifact sudah dieksekusi dengan command:
+- `dotnet pack .\src\Emcode.Pst.Libs\Emcode.Pst.Libs.csproj -c Release -o .\artifacts\nuget`
+
+Hasil:
+- Package berhasil dibuat di `artifacts/nuget/Emcode.Pst.Libs.1.0.4.nupkg`.
+
+**File Terkait**
+- artifacts/nuget/Emcode.Pst.Libs.1.0.4.nupkg
+- CodexReport.md
+
+## Laporan 146 — 23 Feb 2026, 14:44
+Tanggal laporan: 23 Feb 2026, 14:44
+
+**Ringkasan Pertanyaan**
+Menanyakan command untuk build NuGet dan push NuGet.
+
+**Statement Jawaban**
+Command dasar yang diberikan:
+- Build/pack NuGet: `dotnet pack .\src\<ProjectName>\<ProjectName>.csproj -c Release -o .\artifacts\nuget`
+- Push NuGet ke nuget.org: `dotnet nuget push .\artifacts\nuget\*.nupkg --source https://api.nuget.org/v3/index.json --api-key <NUGET_API_KEY>`
+
+Tambahan:
+- Untuk skip symbol package saat push wildcard: `--skip-duplicate` dan filter file `*.nupkg` non `*.snupkg` bila perlu.
+
+**File Terkait**
+- CodexReport.md
+
 ## Laporan 145 — 23 Feb 2026, 14:38
 Tanggal laporan: 23 Feb 2026, 14:38
 
