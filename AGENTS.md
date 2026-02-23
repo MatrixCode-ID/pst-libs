@@ -59,7 +59,7 @@ Aturan ini bersifat ABSOLUT dan tidak boleh dilanggar.
 
 ### 3. LOGGING RULES
 
-Berlaku untuk SEMUA permintaan user KECUALI audit.
+Berlaku untuk SEMUA permintaan user KECUALI audit dan commit.
 
 - Setiap jawaban user harus di log pada [CodexReport.md](CodexReport.md)
 - Append hasil di paling atas
@@ -67,15 +67,21 @@ Berlaku untuk SEMUA permintaan user KECUALI audit.
 - Berikan nomor urut
 - Nomor harus descending
 - Jelaskan file yang dibuat / diubah
+- Jika user meminta commit:
+  - JANGAN buat log pada CodexReport.md
+  - JANGAN append apapun ke CodexReport.md
 
 ### 4. REFACTOR RULES
 
-Jika ada permintaan perubahan code:
+Jika ada permintaan perubahan code (kecuali commit):
 
 - Siapkan plan di [RefactorPlan.md](RefactorPlan.md)
 - Append di paling atas
 - Nomor urut descending
 - Tunggu perintah user sebelum eksekusi
+- Jika user meminta commit:
+  - Tidak perlu membuat plan di [RefactorPlan.md](RefactorPlan.md)
+  - Tidak perlu menunggu perintah eksekusi plan
 
 ### 5. TESTING RULES
 

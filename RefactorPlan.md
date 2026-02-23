@@ -1,3 +1,25 @@
+## Plan 45 — 23 Feb 2026, 14:06
+Tanggal plan: 23 Feb 2026, 14:06
+
+**Ringkasan**
+Memperbarui `AGENTS.md` agar saat user meminta commit: tidak perlu log ke `CodexReport.md` dan tidak perlu menjalankan `RefactorPlan` terlebih dahulu.
+
+**Sumber**
+- Permintaan user — 23 Feb 2026
+
+**Lingkup**
+- AGENTS.md
+
+**Rencana Prioritas**
+1. Tambahkan pengecualian eksplisit pada `LOGGING RULES` bahwa permintaan commit tidak perlu dicatat ke `CodexReport.md`.
+2. Tambahkan pengecualian eksplisit pada `REFACTOR RULES` bahwa permintaan commit tidak wajib membuat plan di `RefactorPlan.md`.
+3. Pastikan pengecualian commit tetap konsisten dengan `COMMIT & VERSIONING RULES` yang sudah ada.
+4. Validasi redaksi rule agar jelas dan tidak ambigu.
+
+**Kriteria Selesai**
+- `AGENTS.md` memuat pengecualian commit untuk logging.
+- `AGENTS.md` memuat pengecualian commit untuk keharusan refactor plan.
+- Aturan commit/versioning tetap berlaku untuk permintaan commit.
 ## Plan 44 — 23 Feb 2026, 13:56
 Tanggal plan: 23 Feb 2026, 13:56
 
@@ -1233,6 +1255,7 @@ Menyusun rencana dua tahap implementasi read dan write PST.
 
 **Kriteria Selesai**
 - Rencana dua tahap terdokumentasi.
+
 
 
 

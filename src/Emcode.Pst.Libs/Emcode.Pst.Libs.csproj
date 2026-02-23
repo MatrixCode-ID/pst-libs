@@ -9,7 +9,7 @@
 
   <PropertyGroup>
     <PackageId>Emcode.Pst.Libs</PackageId>
-    <Version>1.0.1</Version>
+    <Version>1.0.2</Version>
     <Authors>Aan Dahliansyah</Authors>
     <Company>MatrixCode</Company>
     <Description>Library untuk baca/tulis PST.</Description>
@@ -17,7 +17,7 @@
     <PackageProjectUrl>https://github.com/MatrixCode-ID/pst-libs</PackageProjectUrl>
     <RepositoryUrl>https://github.com/MatrixCode-ID/pst-libs</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
-    <PackageReleaseNotes>Pembaruan dokumentasi GitHub Pages, workflow deploy pages, dan aturan commit/versioning.</PackageReleaseNotes>
+    <PackageReleaseNotes>Pembaruan aturan AGENTS untuk alur commit, logging, dan refactor-plan.</PackageReleaseNotes>
     <PackageReadmeFile>README.id.md</PackageReadmeFile>
     <PackageIcon>icon.png</PackageIcon>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
