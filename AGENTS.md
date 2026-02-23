@@ -84,7 +84,25 @@ Jika ada permintaan perubahan code:
   - Jalankan test tanpa restore
   - Informasikan ke user bahwa test dijalankan tanpa restore
 
-### 6. AUDIT RULE REFERENCE
+### 6. COMMIT & VERSIONING RULES
+
+Berlaku saat user meminta commit.
+
+- WAJIB tanya user tipe kenaikan versi: `major`, `minor`, atau `build`
+- Format versi WAJIB: `XX1.XX2.XX3`
+  - `XX1` = Major update
+  - `XX2` = Minor update
+  - `XX3` = Build update
+- Aturan increment versi:
+  - `major` → naikkan `XX1` +1, lalu reset `XX2` = 0 dan `XX3` = 0
+  - `minor` → naikkan `XX2` +1, lalu reset `XX3` = 0
+  - `build` → naikkan `XX3` +1
+- Setiap commit WAJIB:
+  - Update versi package di file project terkait (contoh: `.csproj`)
+  - Update [ChangeLogs.md](ChangeLogs.md) sesuai perubahan versi dan ringkasan perubahan
+  - Baru lanjut proses commit setelah dua update di atas selesai
+
+### 7. AUDIT RULE REFERENCE
 
 - Jika diminta audit → jalankan sesuai [AuditRules.md](AuditRules.md)
 - Audit TIDAK boleh membuat log

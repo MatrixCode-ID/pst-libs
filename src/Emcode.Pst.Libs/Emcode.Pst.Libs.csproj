@@ -7,4 +7,25 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
 
+  <PropertyGroup>
+    <PackageId>Emcode.Pst.Libs</PackageId>
+    <Version>1.0.1</Version>
+    <Authors>Aan Dahliansyah</Authors>
+    <Company>MatrixCode</Company>
+    <Description>Library untuk baca/tulis PST.</Description>
+    <PackageTags>pst outlook email</PackageTags>
+    <PackageProjectUrl>https://github.com/MatrixCode-ID/pst-libs</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/MatrixCode-ID/pst-libs</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <PackageReleaseNotes>Pembaruan dokumentasi GitHub Pages, workflow deploy pages, dan aturan commit/versioning.</PackageReleaseNotes>
+    <PackageReadmeFile>README.id.md</PackageReadmeFile>
+    <PackageIcon>icon.png</PackageIcon>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageCopyright>Copyright (c) 2026 MatrixCode. All rights reserved.</PackageCopyright>
+  </PropertyGroup>
+  
+  <ItemGroup>
+    <None Include="..\\..\\README.id.md" Pack="true" PackagePath="\" />
+    <None Include="..\\..\\icon.png" Pack="true" PackagePath="\" />
+  </ItemGroup>
 </Project>

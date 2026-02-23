@@ -1,0 +1,16 @@
+# GitHub Pages config for Emcode.Pst docs
+
+title: Emcode.Pst Documentation
+email: ''
+description: Help dan API References untuk Emcode.Pst.Libs
+baseurl: ''
+url: ''
+markdown: kramdown
+theme: minima
+permalink: pretty
+
+defaults:
+  - scope:
+      path: ''
+    values:
+      layout: default

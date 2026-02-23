@@ -1,0 +1,21 @@
+:root {
+  --doc-bg: #f7f9fc;
+  --doc-text: #172032;
+  --doc-link: #0057b8;
+  --doc-border: #d7dfeb;
+}
+
+body {
+  background: var(--doc-bg);
+  color: var(--doc-text);
+}
+
+a {
+  color: var(--doc-link);
+}
+
+table, th, td {
+  border: 1px solid var(--doc-border);
+  border-collapse: collapse;
+  padding: 6px;
+}

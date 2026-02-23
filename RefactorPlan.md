@@ -1,5 +1,283 @@
+## Plan 44 — 23 Feb 2026, 13:56
+Tanggal plan: 23 Feb 2026, 13:56
+
+**Ringkasan**
+Memperbarui `AGENTS.md` agar saat user meminta commit, agent wajib menanyakan jenis kenaikan versi (`major`, `minor`, atau `build`), lalu memperbarui `ChangeLogs.md` dan increment versi package sesuai format `XX1.XX2.XX3`.
+
+**Sumber**
+- Permintaan user — 23 Feb 2026
+
+**Lingkup**
+- AGENTS.md
+- (referensi perilaku) ChangeLogs.md
+- (referensi perilaku) src/Emcode.Pst.Libs/Emcode.Pst.Libs.csproj
+
+**Rencana Prioritas**
+1. Tambahkan rule baru pada `AGENTS.md` di section aturan kerja agar sebelum commit agent wajib meminta klasifikasi update versi: `major`, `minor`, atau `build`.
+2. Definisikan mapping format versi `XX1.XX2.XX3`:
+   - `XX1` = Major update.
+   - `XX2` = Minor update.
+   - `XX3` = Build update.
+3. Tambahkan rule perilaku update versi:
+   - `major`: naikkan `XX1`, reset `XX2` dan `XX3` ke `0`.
+   - `minor`: naikkan `XX2`, reset `XX3` ke `0`.
+   - `build`: naikkan `XX3`.
+4. Tambahkan rule bahwa setiap permintaan commit harus disertai update `ChangeLogs.md` dan update versi pada file project yang relevan sebelum commit.
+5. Pastikan aturan baru tidak bertentangan dengan prioritas rule yang sudah ada di `AGENTS.md`.
+
+**Kriteria Selesai**
+- `AGENTS.md` memuat aturan eksplisit pertanyaan jenis update versi sebelum commit.
+- `AGENTS.md` memuat aturan update changelog + increment versi dengan format `XX1.XX2.XX3`.
+- Mapping major/minor/build terdokumentasi jelas.
+## Plan 43 — 23 Feb 2026, 13:47
+Tanggal plan: 23 Feb 2026, 13:47
+
+**Ringkasan**
+Membuat file `ChangeLogs.md` untuk menyimpan histori perubahan versi dengan format standar dokumentasi rilis.
+
+**Sumber**
+- Permintaan user — 23 Feb 2026
+
+**Lingkup**
+- ChangeLogs.md
+
+**Rencana Prioritas**
+1. Buat file `ChangeLogs.md` di root repository.
+2. Terapkan struktur standar changelog yang konsisten:
+   - Header dan tujuan dokumen.
+   - Referensi format `Keep a Changelog`.
+   - Referensi versioning `Semantic Versioning`.
+   - Section `[Unreleased]`.
+   - Template section versi rilis (`Added`, `Changed`, `Fixed`, `Removed`, `Security`, dll).
+3. Tambahkan entri awal untuk versi terbaru yang sudah ada agar baseline terdokumentasi.
+4. Pastikan gaya penulisan konsisten dengan dokumen lain dalam repo.
+
+**Kriteria Selesai**
+- `ChangeLogs.md` tersedia di root project.
+- Format changelog siap dipakai untuk update versi berikutnya.
+- Baseline versi awal sudah tercatat.
+## Plan 42 — 23 Feb 2026, 13:41
+Tanggal plan: 23 Feb 2026, 13:41
+
+**Ringkasan**
+Membuat workflow GitHub Actions untuk publish GitHub Pages dari folder `doc/pages`.
+
+**Sumber**
+- Permintaan user — 23 Feb 2026
+
+**Lingkup**
+- .github/workflows/pages.yml
+- (opsional) doc/pages/_config.yml (hanya bila perlu penyesuaian ringan)
+
+**Rencana Prioritas**
+1. Buat workflow `.github/workflows/pages.yml` dengan trigger `push` pada perubahan `doc/pages/**` dan `workflow_dispatch`.
+2. Konfigurasi permission minimum untuk deployment Pages: `contents: read`, `pages: write`, `id-token: write`.
+3. Gunakan action resmi GitHub Pages: `actions/checkout`, `actions/configure-pages`, `actions/upload-pages-artifact` dengan `path: doc/pages`, dan `actions/deploy-pages`.
+4. Tambahkan `concurrency` untuk mencegah deploy bertumpuk.
+5. Validasi sintaks YAML dan struktur workflow agar siap dijalankan di repository.
+
+**Kriteria Selesai**
+- File `.github/workflows/pages.yml` tersedia dan valid.
+- Deploy GitHub Pages mengambil artefak dari `doc/pages`.
+- Workflow dapat dipicu otomatis via push dan manual via Actions tab.
+## Plan 41 — 23 Feb 2026, 13:30
+Tanggal plan: 23 Feb 2026, 13:30
+
+**Ringkasan**
+Publish dokumentasi ke branch `gh-pages` sebagai source GitHub Pages, lalu hapus folder `doc/pages` dari branch utama.
+
+**Sumber**
+- Permintaan user — 23 Feb 2026
+
+**Lingkup**
+- Branch `gh-pages` (konten dokumentasi root)
+- doc/pages/* (penghapusan dari branch utama)
+- (opsional) .github/workflows/pages.yml (jika diperlukan untuk fallback deploy)
+
+**Rencana Prioritas**
+1. Validasi status git lokal agar perubahan dokumentasi `doc/pages` terbaru siap dipublish.
+2. Buat/perbarui branch `gh-pages` dari konten `doc/pages` (copy ke root branch), commit, lalu push ke remote `origin/gh-pages`.
+3. Verifikasi branch `gh-pages` berisi artefak dokumentasi (`index.md`, `api/`, `help/`, `_config.yml`, assets).
+4. Kembali ke branch kerja utama, hapus folder `doc/pages` dari tracking git.
+5. Commit perubahan penghapusan `doc/pages` di branch utama.
+6. Catat langkah setting repository GitHub Pages: source dari branch `gh-pages` root.
+
+**Kriteria Selesai**
+- Branch `gh-pages` terupdate dengan konten dokumentasi siap publish.
+- Folder `doc/pages` sudah terhapus di branch utama.
+- Struktur docs tetap dapat diakses melalui source `gh-pages` root.
+## Plan 40 — 23 Feb 2026, 13:15
+Tanggal plan: 23 Feb 2026, 13:15
+
+**Ringkasan**
+Restruktur dokumentasi GitHub Pages agar menyerupai pola Microsoft .NET Help: dokumentasi konseptual (`Help`) dan `API References` terstruktur dari XML documentation (namespace, type, property, event, method, dll).
+
+**Sumber**
+- Permintaan user — 23 Feb 2026
+
+**Lingkup**
+- doc/pages/index.md
+- doc/pages/toc.md
+- doc/pages/help/index.md
+- doc/pages/help/getting-started.md
+- doc/pages/help/concepts.md
+- doc/pages/help/how-to/*.md
+- doc/pages/help/faq.md
+- doc/pages/api/index.md
+- doc/pages/api/namespaces.md
+- doc/pages/api/<namespace>/index.md
+- doc/pages/api/<namespace>/<type>.md
+- doc/pages/_config.yml
+- doc/pages/assets/css/site.css (opsional, untuk layout navigasi ala docs)
+
+**Rencana Prioritas**
+1. Definisikan information architecture ala Microsoft Docs di `doc/pages`: `Help` (konseptual) terpisah dari `API Reference` (referensi teknis).
+2. Siapkan `doc/pages/toc.md` sebagai navigasi sidebar bertingkat (Home > Help > API) agar pola jelajah serupa documentation framework.
+3. Susun halaman Help: `getting-started`, `concepts`, `how-to`, `faq`, dengan tautan silang ke halaman API terkait.
+4. Kumpulkan XML documentation dari build output/library source lalu petakan ke hirarki `Namespace > Type > Members`.
+5. Susun `API References`:
+   - `api/index.md` sebagai portal reference.
+   - `api/namespaces.md` sebagai daftar namespace.
+   - halaman namespace berisi daftar type.
+   - halaman type berisi signature + deskripsi + tabel member (`Properties`, `Events`, `Methods`, `Constructors`, dan anggota lain jika ada).
+6. Standarkan template halaman type agar konsisten (summary, declaration, remarks, exceptions, examples, see also) mengikuti gaya referensi Microsoft.
+7. Tambahkan konfigurasi GitHub Pages pada `doc/pages/_config.yml` dan styling minimal agar layout docs rapi di desktop/mobile.
+8. Validasi seluruh link internal, anchor member, dan konsistensi isi dengan XML docs serta API aktual di `src/Emcode.Pst.Libs`.
+
+**Kriteria Selesai**
+- Struktur `Help` dan `API References` tersedia di `doc/pages` dan siap publish ke GitHub Pages.
+- Navigasi bertingkat (`toc`) memudahkan browsing seperti docs framework.
+- Setiap object API yang didokumentasikan memiliki daftar anggota (property/event/method/dll) bersumber dari XML documentation.
+- Tidak ada tautan internal/anchor yang rusak pada halaman yang dibuat.
+## Plan 39 — 23 Feb 2026, 13:10
+Tanggal plan: 23 Feb 2026, 13:10
+
+**Ringkasan**
+Merevisi rencana dokumentasi GitHub Pages ke struktur `doc/pages` dengan fokus pada halaman `Help` dan `Object References` (property, event, method, dll) berdasarkan XML documentation library.
+
+**Sumber**
+- Permintaan user — 23 Feb 2026
+
+**Lingkup**
+- doc/pages/index.md
+- doc/pages/references/index.md
+- doc/pages/references/objects.md
+- doc/pages/references/<namespace-or-type>.md (per object group, jika diperlukan)
+- doc/pages/help/index.md
+- doc/pages/_config.yml
+
+**Rencana Prioritas**
+1. Ubah struktur target dari `docs/` menjadi `doc/pages/` sebagai source publish GitHub Pages.
+2. Buat landing page `doc/pages/index.md` dengan navigasi utama ke `Help` dan `References`.
+3. Kumpulkan sumber XML documentation dari object C# di `src/Emcode.Pst.Libs` sebagai basis konten reference.
+4. Susun halaman `doc/pages/references/index.md` dan `doc/pages/references/objects.md` berisi daftar object + anggota (constructor, property, method, event, field bila ada), signature, dan ringkasan dari XML docs.
+5. Tambahkan halaman `doc/pages/help/index.md` berisi quick-start, pola penggunaan umum, dan troubleshooting dasar yang merujuk ke halaman object reference.
+6. Tambahkan `doc/pages/_config.yml` untuk konfigurasi site (title, description, theme, permalink, navigation baseline).
+7. Validasi tautan internal antardokumen serta konsistensi antara XML docs, `README.id.md`, dan API aktual source code.
+
+**Kriteria Selesai**
+- Struktur dokumentasi siap dipublish dari `doc/pages`.
+- Halaman `Help` dan `References` tersedia dan saling terhubung.
+- Object references menampilkan anggota object (property, event, method, dll) sesuai XML documentation.
+- Tidak ada tautan internal rusak pada dokumen yang dibuat.
+## Plan 38 — 23 Feb 2026, 13:06
+Tanggal plan: 23 Feb 2026, 13:06
+
+**Ringkasan**
+Menyusun dokumentasi `References` dan `Help` untuk library `Emcode.Pst.Libs` yang siap dipublish ke GitHub Pages.
+
+**Sumber**
+- Permintaan user — 23 Feb 2026
+
+**Lingkup**
+- docs/index.md
+- docs/references/index.md
+- docs/help/index.md
+- docs/_config.yml
+- docs/assets/* (jika diperlukan untuk styling ringan)
+
+**Rencana Prioritas**
+1. Definisikan struktur dokumentasi GitHub Pages berbasis folder `docs/` dengan navigasi utama: Home, References, dan Help.
+2. Susun konten `References` berisi API surface utama library (konsep, class inti, opsi, dan contoh penggunaan sync/async).
+3. Susun konten `Help` berisi troubleshooting, FAQ, dan panduan langkah cepat untuk skenario umum.
+4. Tambahkan konfigurasi GitHub Pages (`docs/_config.yml`) agar site dapat dirender konsisten (judul, deskripsi, theme, permalink).
+5. Validasi konsistensi tautan internal antardokumen dan kesesuaian istilah dengan `README.id.md` serta `src/Emcode.Pst.Libs/Emcode.Pst.Libs.csproj`.
+
+**Kriteria Selesai**
+- Struktur dokumentasi siap dipublish melalui GitHub Pages dari folder `docs/`.
+- Halaman `References` dan `Help` tersedia dan saling terhubung.
+- Konten relevan dengan fitur library saat ini dan mudah dipakai pengguna.
+- Tidak ada tautan internal yang rusak pada dokumen yang ditambahkan.
 # Refactor Plan - PST Projects
 
+## Plan 37 — 23 Feb 2026, 12:28
+Tanggal plan: 23 Feb 2026, 12:28
+
+**Ringkasan**
+Mengganti konfigurasi NuGet package readme dari `README.md` menjadi `README.id.md` pada project library.
+
+**Sumber**
+- Permintaan user — 23 Feb 2026
+
+**Lingkup**
+- src/Emcode.Pst.Libs/Emcode.Pst.Libs.csproj
+
+**Rencana Prioritas**
+1. Ubah properti `PackageReadmeFile` dari `README.md` ke `README.id.md`.
+2. Sesuaikan item `None Include` yang di-pack agar menyertakan `README.id.md` ke root package.
+3. Hapus referensi pack `README.md` jika sudah tidak dipakai sebagai package readme.
+4. Validasi dengan `dotnet pack` untuk memastikan metadata/readme package valid.
+
+**Kriteria Selesai**
+- NuGet package readme mengarah ke `README.id.md`.
+- File readme yang direferensikan benar-benar ikut di-pack.
+- `dotnet pack` berhasil tanpa error metadata readme.
+## Plan 36 — 23 Feb 2026, 12:27
+Tanggal plan: 23 Feb 2026, 12:27
+
+**Ringkasan**
+Membuat icon package NuGet yang selaras dengan prinsip project `Emcode.Pst` (fokus PST/email, struktur folder, dan nuansa engineering library).
+
+**Sumber**
+- Permintaan user — 23 Feb 2026
+- Konteks produk — `README.id.md`
+
+**Lingkup**
+- icon.png
+- (opsional turunan) icon.svg untuk sumber desain
+
+**Rencana Prioritas**
+1. Definisikan konsep visual icon berdasarkan domain PST: envelope + folder/tree motif dengan gaya minimal, tajam, dan mudah dikenali di ukuran kecil.
+2. Generate aset icon resolusi NuGet-friendly (minimal 128x128, target 256x256) dengan kontras warna yang jelas.
+3. Validasi keterbacaan icon pada ukuran kecil (mis. 32x32) agar tetap terbaca sebagai identitas package.
+4. Simpan hasil final ke `icon.png` (dan `icon.svg` bila dipakai sebagai source).
+
+**Kriteria Selesai**
+- Icon final mencerminkan konteks PST/email secara konsisten.
+- File `icon.png` valid untuk metadata `PackageIcon` NuGet.
+- Visual tetap jelas pada skala kecil.
+## Plan 35 — 23 Feb 2026, 12:25
+Tanggal plan: 23 Feb 2026, 12:25
+
+**Ringkasan**
+Menambahkan properti metadata NuGet opsional pada `src/Emcode.Pst.Libs/Emcode.Pst.Libs.csproj` agar package lebih lengkap saat dipublikasikan.
+
+**Sumber**
+- Permintaan user — 23 Feb 2026
+
+**Lingkup**
+- src/Emcode.Pst.Libs/Emcode.Pst.Libs.csproj
+
+**Rencana Prioritas**
+1. Tambahkan `PackageProjectUrl` dan `RepositoryType` untuk melengkapi metadata repository/package.
+2. Tambahkan `PackageReleaseNotes` dengan catatan rilis awal.
+3. Tambahkan `PackageIcon` dan item file icon agar ikut ter-pack di root package.
+4. Validasi struktur `.csproj` tetap valid dan konsisten dengan properti yang sudah ada.
+
+**Kriteria Selesai**
+- Properti metadata opsional NuGet terisi di `.csproj`.
+- File icon terkonfigurasi untuk dipack (jika file disediakan).
+- `dotnet pack` dapat menghasilkan `.nupkg` tanpa error metadata.
 ## Plan 34 — 16 Feb 2026, 11:17
 Tanggal plan: 16 Feb 2026, 11:17
 
@@ -955,6 +1233,16 @@ Menyusun rencana dua tahap implementasi read dan write PST.
 
 **Kriteria Selesai**
 - Rencana dua tahap terdokumentasi.
+
+
+
+
+
+
+
+
+
+
 
 
 

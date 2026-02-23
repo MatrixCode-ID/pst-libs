@@ -1,3 +1,596 @@
+## Laporan 138 — 23 Feb 2026, 14:05
+Tanggal laporan: 23 Feb 2026, 14:05
+
+**Ringkasan Pertanyaan**
+Meminta commit codebase dengan tipe versi `build`.
+
+**Statement Jawaban**
+Eksekusi dilakukan dengan aturan build increment (`XX3 + 1`) dari `1.0.0` menjadi `1.0.1`.
+
+Perubahan utama sebelum commit:
+- Update versi package pada `src/Emcode.Pst.Libs/Emcode.Pst.Libs.csproj` menjadi `1.0.1`.
+- Update `PackageReleaseNotes` agar sesuai konten rilis.
+- Update `ChangeLogs.md` dengan entri rilis `1.0.1`.
+- Selanjutnya commit seluruh perubahan codebase sesuai permintaan user.
+
+**File Terkait**
+- src/Emcode.Pst.Libs/Emcode.Pst.Libs.csproj
+- ChangeLogs.md
+- AGENTS.md
+- RefactorPlan.md
+- .github/workflows/pages.yml
+- doc/Emcode.Pst.Libs.csproj.md
+- doc/pages/*
+- icon.png
+- CodexReport.md
+## Laporan 137 — 23 Feb 2026, 14:04
+Tanggal laporan: 23 Feb 2026, 14:04
+
+**Ringkasan Pertanyaan**
+Meminta commit seluruh codebase.
+
+**Statement Jawaban**
+Commit belum dijalankan karena aturan `AGENTS.md` mewajibkan konfirmasi tipe kenaikan versi terlebih dahulu (`major`, `minor`, atau `build`).
+
+Menunggu pilihan tipe versi dari user sebelum melanjutkan:
+- Update versi pada `.csproj`
+- Update `ChangeLogs.md`
+- Commit perubahan
+
+**File Terkait**
+- AGENTS.md
+- src/Emcode.Pst.Libs/Emcode.Pst.Libs.csproj
+- ChangeLogs.md
+- CodexReport.md
+## Laporan 136 — 23 Feb 2026, 14:03
+Tanggal laporan: 23 Feb 2026, 14:03
+
+**Ringkasan Pertanyaan**
+Meminta menjalankan Plan 44 untuk update `AGENTS.md` agar saat user minta commit wajib tanya tipe update versi (`major/minor/build`), lalu update changelog dan increment versi format `XX1.XX2.XX3`.
+
+**Statement Jawaban**
+Plan 44 sudah dieksekusi.
+
+Perubahan pada `AGENTS.md`:
+- Menambahkan section baru `### 6. COMMIT & VERSIONING RULES`.
+- Menetapkan kewajiban menanyakan tipe kenaikan versi (`major`, `minor`, `build`) sebelum commit.
+- Menetapkan format versi wajib `XX1.XX2.XX3` dengan mapping:
+  - `XX1` = Major update
+  - `XX2` = Minor update
+  - `XX3` = Build update
+- Menetapkan aturan increment versi:
+  - `major` => `XX1+1`, reset `XX2` dan `XX3` ke `0`
+  - `minor` => `XX2+1`, reset `XX3` ke `0`
+  - `build` => `XX3+1`
+- Menetapkan kewajiban update versi package (`.csproj`) dan `ChangeLogs.md` sebelum commit.
+- Menyesuaikan penomoran `AUDIT RULE REFERENCE` dari section 6 menjadi section 7.
+
+**File Terkait**
+- AGENTS.md
+- CodexReport.md
+## Laporan 135 — 23 Feb 2026, 13:56
+Tanggal laporan: 23 Feb 2026, 13:56
+
+**Ringkasan Pertanyaan**
+Meminta update `AGENTS.md` agar setiap permintaan commit wajib tanya jenis update versi (`major/minor/build`), lalu update changelog dan increment versi format `XX1.XX2.XX3`.
+
+**Statement Jawaban**
+Sesuai aturan project untuk perubahan file, plan refactor sudah dibuat terlebih dahulu sebagai **Plan 44** di `RefactorPlan.md`.
+
+Cakupan Plan 44:
+- Menambah rule wajib tanya jenis update versi sebelum commit.
+- Menetapkan mapping format `XX1.XX2.XX3` (major/minor/build).
+- Menetapkan aturan increment versi per tipe update.
+- Menetapkan kewajiban update `ChangeLogs.md` dan versi package sebelum commit.
+
+Menunggu perintah user untuk eksekusi Plan 44.
+
+**File Terkait**
+- RefactorPlan.md
+- CodexReport.md
+## Laporan 134 — 23 Feb 2026, 13:48
+Tanggal laporan: 23 Feb 2026, 13:48
+
+**Ringkasan Pertanyaan**
+Meminta menjalankan Plan 43 untuk membuat file `ChangeLogs.md` sesuai standar.
+
+**Statement Jawaban**
+Plan 43 sudah dieksekusi.
+
+Perubahan yang dilakukan:
+- Menambahkan file baru `ChangeLogs.md` di root repository.
+- Menggunakan format standar changelog dengan referensi `Keep a Changelog` dan `Semantic Versioning`.
+- Menambahkan section `Unreleased` dengan kategori perubahan standar (`Added`, `Changed`, `Deprecated`, `Removed`, `Fixed`, `Security`).
+- Menambahkan baseline versi `1.0.0` dengan ringkasan rilis awal library.
+
+**File Terkait**
+- ChangeLogs.md
+- CodexReport.md
+## Laporan 133 — 23 Feb 2026, 13:47
+Tanggal laporan: 23 Feb 2026, 13:47
+
+**Ringkasan Pertanyaan**
+Meminta dibuatkan file `ChangeLogs.md` untuk menyimpan perubahan versi sesuai standar.
+
+**Statement Jawaban**
+Sesuai aturan project untuk perubahan file, plan refactor dibuat terlebih dahulu sebagai **Plan 43** di `RefactorPlan.md`.
+
+Plan 43 mencakup:
+- Pembuatan file `ChangeLogs.md` di root repository.
+- Format standar changelog (`Keep a Changelog` + `Semantic Versioning`).
+- Penambahan section `Unreleased` dan template kategori perubahan.
+- Baseline entri versi awal.
+
+Menunggu perintah user untuk eksekusi Plan 43.
+
+**File Terkait**
+- RefactorPlan.md
+- CodexReport.md
+## Laporan 132 — 23 Feb 2026, 13:42
+Tanggal laporan: 23 Feb 2026, 13:42
+
+**Ringkasan Pertanyaan**
+Meminta menjalankan Plan 42 untuk membuat workflow GitHub Actions yang publish GitHub Pages dari folder `doc/pages`.
+
+**Statement Jawaban**
+Plan 42 sudah dieksekusi.
+
+Perubahan yang dilakukan:
+- Membuat folder `.github/workflows`.
+- Menambahkan file workflow `.github/workflows/pages.yml`.
+- Workflow dikonfigurasi dengan:
+  - Trigger `push` ke branch `main` saat ada perubahan `doc/pages/**` atau file workflow.
+  - Trigger manual `workflow_dispatch`.
+  - Permissions: `contents: read`, `pages: write`, `id-token: write`.
+  - Upload artifact dari `doc/pages`.
+  - Deploy menggunakan `actions/deploy-pages@v4`.
+
+Catatan:
+- Setelah file ini dipush ke GitHub, aktifkan `Settings > Pages > Source: GitHub Actions`.
+
+**File Terkait**
+- .github/workflows/pages.yml
+- CodexReport.md
+## Laporan 131 — 23 Feb 2026, 13:41
+Tanggal laporan: 23 Feb 2026, 13:41
+
+**Ringkasan Pertanyaan**
+Meminta dibuatkan workflow GitHub Actions untuk GitHub Pages dari folder `doc/pages`.
+
+**Statement Jawaban**
+Sesuai aturan project untuk perubahan file, plan refactor sudah dibuat terlebih dahulu sebagai **Plan 42** di `RefactorPlan.md`.
+
+Plan 42 mencakup:
+- Pembuatan `.github/workflows/pages.yml`.
+- Trigger `push` (path `doc/pages/**`) dan `workflow_dispatch`.
+- Deploy menggunakan action resmi GitHub Pages dengan source artifact dari `doc/pages`.
+- Konfigurasi permission dan concurrency.
+
+Menunggu perintah user untuk eksekusi Plan 42.
+
+**File Terkait**
+- RefactorPlan.md
+- CodexReport.md
+## Laporan 130 — 23 Feb 2026, 13:37
+Tanggal laporan: 23 Feb 2026, 13:37
+
+**Ringkasan Pertanyaan**
+Menanyakan cara menggunakan GitHub Actions.
+
+**Statement Jawaban**
+Diberikan panduan penggunaan GitHub Actions dari nol sampai jalan:
+- Membuat file workflow di `.github/workflows/*.yml`.
+- Menentukan trigger (`push`, `pull_request`, `workflow_dispatch`).
+- Menentukan job, runner, dan step (`checkout`, setup SDK, build/test/deploy).
+- Menjalankan dan memantau eksekusi pada tab Actions.
+- Menambahkan contoh workflow untuk deploy docs ke GitHub Pages.
+
+**File Terkait**
+- CodexReport.md
+## Laporan 129 — 23 Feb 2026, 13:30
+Tanggal laporan: 23 Feb 2026, 13:30
+
+**Ringkasan Pertanyaan**
+Meminta menjalankan publish ke branch `gh-pages` dan menghapus `doc/pages`.
+
+**Statement Jawaban**
+Sesuai aturan project untuk perubahan file/deploy, plan refactor harus dibuat terlebih dahulu sebelum eksekusi.
+
+Plan baru sudah ditambahkan sebagai **Plan 41** di `RefactorPlan.md` dengan cakupan:
+- Publish konten dokumentasi ke branch `gh-pages`.
+- Verifikasi artefak docs di branch publish.
+- Hapus `doc/pages` dari branch utama.
+- Commit perubahan di branch utama.
+
+Menunggu perintah user untuk eksekusi Plan 41.
+
+**File Terkait**
+- RefactorPlan.md
+- CodexReport.md
+## Laporan 128 — 23 Feb 2026, 13:28
+Tanggal laporan: 23 Feb 2026, 13:28
+
+**Ringkasan Pertanyaan**
+Menanyakan apakah `doc/pages` boleh dihapus jika dibuat branch `gh-pages` khusus dokumentasi.
+
+**Statement Jawaban**
+Boleh, selama seluruh sumber dokumentasi memang dipindah dan dikelola penuh di branch `gh-pages`.
+
+Catatan:
+- Jika workflow deploy masih mengambil source dari `doc/pages` di branch utama, folder tersebut tidak boleh dihapus.
+- Jika source Pages diubah ke branch `gh-pages` root, maka `doc/pages` di branch utama opsional.
+
+**File Terkait**
+- CodexReport.md
+## Laporan 127 — 23 Feb 2026, 13:26
+Tanggal laporan: 23 Feb 2026, 13:26
+
+**Ringkasan Pertanyaan**
+Menanyakan cara publish dokumentasi ke branch `gh-pages`.
+
+**Statement Jawaban**
+Diberikan panduan praktis publish ke `gh-pages` dengan dua opsi:
+- Manual deploy dari folder `doc/pages`.
+- Otomatis deploy memakai GitHub Actions (`actions/configure-pages`, `actions/upload-pages-artifact`, `actions/deploy-pages`).
+
+Juga dijelaskan setting repository yang perlu diaktifkan pada menu Pages.
+
+**File Terkait**
+- CodexReport.md
+## Laporan 126 — 23 Feb 2026, 13:24
+Tanggal laporan: 23 Feb 2026, 13:24
+
+**Ringkasan Pertanyaan**
+Meminta menjalankan Plan 40: restruktur dokumentasi GitHub Pages menjadi `Help` dan `API References` seperti dokumentasi Microsoft .NET Framework.
+
+**Statement Jawaban**
+Plan 40 sudah dieksekusi dengan membuat struktur dokumentasi baru pada `doc/pages`.
+
+Hasil utama:
+- Membuat area `Help` (`getting-started`, `concepts`, `how-to`, `faq`).
+- Membuat area `API References` berbasis namespace dan type.
+- Menyusun reference object (property, method, constructor, field enum, event status) berdasarkan XML documentation di source.
+- Menambahkan `toc.md` untuk navigasi bertingkat.
+- Menambahkan `_config.yml` untuk konfigurasi GitHub Pages.
+- Validasi link lokal markdown: **OK, tidak ada link internal rusak**.
+
+**File Terkait**
+- doc/pages/index.md
+- doc/pages/toc.md
+- doc/pages/help/index.md
+- doc/pages/help/getting-started.md
+- doc/pages/help/concepts.md
+- doc/pages/help/how-to/open-and-read.md
+- doc/pages/help/how-to/create-folder-and-message.md
+- doc/pages/help/how-to/import-eml.md
+- doc/pages/help/faq.md
+- doc/pages/api/index.md
+- doc/pages/api/namespaces.md
+- doc/pages/api/Emcode.Pst.Application/index.md
+- doc/pages/api/Emcode.Pst.Application/PstFile.md
+- doc/pages/api/Emcode.Pst.Application/PstOpenOptions.md
+- doc/pages/api/Emcode.Pst.Application.Abstractions/index.md
+- doc/pages/api/Emcode.Pst.Application.Abstractions/IPstReader.md
+- doc/pages/api/Emcode.Pst.Application.Abstractions/IPstWriter.md
+- doc/pages/api/Emcode.Pst.Application.Abstractions/IPstWriterWithContext.md
+- doc/pages/api/Emcode.Pst.Application.Abstractions/PstReadResult.md
+- doc/pages/api/Emcode.Pst.Application.Abstractions/PstWriteContext.md
+- doc/pages/api/Emcode.Pst.Domain/index.md
+- doc/pages/api/Emcode.Pst.Domain/PstAttachment.md
+- doc/pages/api/Emcode.Pst.Domain/PstDraftAttachment.md
+- doc/pages/api/Emcode.Pst.Domain/PstDraftRecipient.md
+- doc/pages/api/Emcode.Pst.Domain/PstFolder.md
+- doc/pages/api/Emcode.Pst.Domain/PstHeaderInfo.md
+- doc/pages/api/Emcode.Pst.Domain/PstMessage.md
+- doc/pages/api/Emcode.Pst.Domain/PstMessageDraft.md
+- doc/pages/api/Emcode.Pst.Domain/PstRecipient.md
+- doc/pages/api/Emcode.Pst.Domain/PstCryptMethod.md
+- doc/pages/api/Emcode.Pst.Domain/PstFormat.md
+- doc/pages/api/Emcode.Pst.Domain/PstRecipientType.md
+- doc/pages/api/Emcode.Pst.Infrastructure/index.md
+- doc/pages/api/Emcode.Pst.Infrastructure/PstMinimalReader.md
+- doc/pages/api/Emcode.Pst.Infrastructure/PstNdbReader.md
+- doc/pages/api/Emcode.Pst.Infrastructure/PstInMemoryWriter.md
+- doc/pages/api/Emcode.Pst.Infrastructure/PstNdbWriter.md
+- doc/pages/_config.yml
+- doc/pages/assets/css/site.css
+- CodexReport.md
+## Laporan 125 — 23 Feb 2026, 13:15
+Tanggal laporan: 23 Feb 2026, 13:15
+
+**Ringkasan Pertanyaan**
+Meminta restruktur plan untuk GitHub Pages agar menjadi `Help` dan `API References` seperti dokumentasi Microsoft .NET Framework.
+
+**Statement Jawaban**
+Plan baru sudah ditambahkan sebagai **Plan 40** di `RefactorPlan.md` dengan struktur dokumentasi bergaya framework docs.
+
+Fokus Plan 40:
+- Pemisahan area `Help` (konseptual) dan `API` (reference teknis).
+- Navigasi bertingkat via `toc.md`.
+- API references per `Namespace > Type > Members` berdasarkan XML documentation.
+- Template halaman type mencakup section khas docs reference (summary, declaration, remarks, examples, see also).
+
+Menunggu perintah user untuk eksekusi Plan 40.
+
+**File Terkait**
+- RefactorPlan.md
+- CodexReport.md
+## Laporan 124 — 23 Feb 2026, 13:12
+Tanggal laporan: 23 Feb 2026, 13:12
+
+**Ringkasan Pertanyaan**
+Meminta update Plan 39 agar fokus ke dokumentasi `Help` dan `Object References` (property, event, method, dll) sesuai XML documentation.
+
+**Statement Jawaban**
+Plan 39 di `RefactorPlan.md` sudah diperbarui.
+
+Perubahan utama:
+- Fokus ringkasan plan diubah ke `Help` + `Object References` berbasis XML documentation.
+- Lingkup diperbarui dengan target `doc/pages/help/index.md` dan `doc/pages/references/objects.md`.
+- Rencana prioritas ditambah langkah ekstraksi sumber XML docs dari object C#.
+- Kriteria selesai diperjelas agar reference menampilkan anggota object (property, event, method, dll) sesuai XML docs.
+
+Menunggu perintah user untuk eksekusi plan yang sudah direvisi.
+
+**File Terkait**
+- RefactorPlan.md
+- CodexReport.md
+## Laporan 123 — 23 Feb 2026, 13:10
+Tanggal laporan: 23 Feb 2026, 13:10
+
+**Ringkasan Pertanyaan**
+Meminta ubah struktur target dokumentasi menjadi `doc/pages` dan menyiapkan plan untuk membuat reference doc.
+
+**Statement Jawaban**
+Plan refactor baru sudah disiapkan sebagai **Plan 39** di `RefactorPlan.md`.
+
+Penyesuaian utama:
+- Struktur publish diarahkan ke `doc/pages`.
+- Fokus deliverable ke reference documentation.
+- Daftar halaman reference dirinci (`api-overview`, `pstfile`, `models`) beserta validasi link dan konsistensi API.
+
+Menunggu perintah user untuk eksekusi Plan 39.
+
+**File Terkait**
+- RefactorPlan.md
+- CodexReport.md
+## Laporan 122 — 23 Feb 2026, 13:09
+Tanggal laporan: 23 Feb 2026, 13:09
+
+**Ringkasan Pertanyaan**
+Menanyakan apakah struktur dokumentasi GitHub Pages harus di folder `docs/`.
+
+**Statement Jawaban**
+Tidak harus di `docs/`.
+
+Opsi GitHub Pages yang umum:
+- Publish dari branch `main` folder `/docs`.
+- Publish dari branch `gh-pages` (root `/`).
+
+Untuk workflow repository ini, `docs/` di branch utama biasanya paling sederhana karena mudah dikelola bersama source code.
+
+**File Terkait**
+- CodexReport.md
+## Laporan 121 — 23 Feb 2026, 13:06
+Tanggal laporan: 23 Feb 2026, 13:06
+
+**Ringkasan Pertanyaan**
+Meminta dibuatkan dokumentasi `references` dan `help` untuk library project yang akan dipublish ke GitHub Pages.
+
+**Statement Jawaban**
+Sesuai aturan project untuk perubahan file, plan refactor sudah dibuat di `RefactorPlan.md` sebagai **Plan 38**.
+
+Rencana mencakup:
+- Struktur dokumentasi `docs/` untuk GitHub Pages.
+- Halaman `References` dan `Help`.
+- Konfigurasi `docs/_config.yml`.
+- Validasi tautan internal dan konsistensi konten.
+
+Menunggu perintah user untuk eksekusi Plan 38.
+
+**File Terkait**
+- RefactorPlan.md
+- CodexReport.md
+## Laporan 120 — 23 Feb 2026, 13:02
+Tanggal laporan: 23 Feb 2026, 13:02
+
+**Ringkasan Pertanyaan**
+Meminta dibuatkan dokumentasi untuk file `src/Emcode.Pst.Libs/Emcode.Pst.Libs.csproj`.
+
+**Statement Jawaban**
+Dokumentasi baru berhasil dibuat pada `doc/Emcode.Pst.Libs.csproj.md`.
+
+Isi dokumentasi mencakup:
+- Penjelasan properti build utama (`TargetFramework`, `Nullable`, `ImplicitUsings`, dll).
+- Penjelasan metadata NuGet (`PackageId`, `Version`, `PackageReadmeFile`, `PackageIcon`, dll).
+- Penjelasan item file yang ikut dipack (`README.id.md` dan `icon.png`).
+- Catatan pemeliharaan dan command validasi `dotnet pack`.
+
+**File Terkait**
+- doc/Emcode.Pst.Libs.csproj.md
+- CodexReport.md
+## Laporan 119 — 23 Feb 2026, 12:34
+Tanggal laporan: 23 Feb 2026, 12:34
+
+**Ringkasan Pertanyaan**
+Meminta release ulang paket.
+
+**Statement Jawaban**
+Eksekusi dilakukan dengan membuat package versi patch baru tanpa mengubah file project menggunakan command:
+`dotnet pack src\Emcode.Pst.Libs\Emcode.Pst.Libs.csproj -c Release -o artifacts -p:Version=1.0.1`
+
+Hasil:
+- Package baru berhasil dibuat: `artifacts/Emcode.Pst.Libs.1.0.1.nupkg`.
+- Langkah publish ke `nuget.org` masih membutuhkan API key user.
+
+**File Terkait**
+- artifacts/Emcode.Pst.Libs.1.0.1.nupkg
+- CodexReport.md
+## Laporan 118 — 23 Feb 2026, 12:33
+Tanggal laporan: 23 Feb 2026, 12:33
+
+**Ringkasan Pertanyaan**
+Meminta release ulang paket.
+
+**Statement Jawaban**
+Dijelaskan bahwa rilis ulang ke `nuget.org` tidak bisa memakai versi yang sama (`1.0.0`), sehingga perlu bump versi (mis. `1.0.1`), lalu `dotnet pack` dan `dotnet nuget push`.
+
+**File Terkait**
+- src/Emcode.Pst.Libs/Emcode.Pst.Libs.csproj
+- artifacts/Emcode.Pst.Libs.1.0.0.nupkg
+- CodexReport.md
+## Laporan 117 — 23 Feb 2026, 12:32
+Tanggal laporan: 23 Feb 2026, 12:32
+
+**Ringkasan Pertanyaan**
+Menanyakan cara menambahkan copyright pada paket NuGet.
+
+**Statement Jawaban**
+Dijelaskan bahwa copyright NuGet ditambahkan melalui properti `PackageCopyright` pada file `.csproj` library, lalu divalidasi dengan `dotnet pack`.
+
+**File Terkait**
+- src/Emcode.Pst.Libs/Emcode.Pst.Libs.csproj
+- CodexReport.md
+## Laporan 116 — 23 Feb 2026, 12:30
+Tanggal laporan: 23 Feb 2026, 12:30
+
+**Ringkasan Pertanyaan**
+Meminta menjalankan Plan 37 untuk mengganti readme package ke `README.id.md`.
+
+**Statement Jawaban**
+Plan 37 sudah dieksekusi.
+
+Perubahan:
+- `PackageReadmeFile` diubah menjadi `README.id.md`.
+- Item pack readme diubah dari `README.md` ke `README.id.md`.
+
+Validasi:
+- `dotnet pack` berhasil dan package NuGet tetap terbentuk normal.
+
+**File Terkait**
+- src/Emcode.Pst.Libs/Emcode.Pst.Libs.csproj
+- CodexReport.md
+## Laporan 115 — 23 Feb 2026, 12:28
+Tanggal laporan: 23 Feb 2026, 12:28
+
+**Ringkasan Pertanyaan**
+Meminta mengganti readme package ke `README.id.md`.
+
+**Statement Jawaban**
+Sesuai aturan project untuk perubahan file, plan refactor sudah dibuat di `RefactorPlan.md` sebagai Plan 37 untuk mengubah `PackageReadmeFile` dan item pack readme, lalu memvalidasi dengan `dotnet pack` setelah eksekusi.
+
+**File Terkait**
+- RefactorPlan.md
+- src/Emcode.Pst.Libs/Emcode.Pst.Libs.csproj
+- CodexReport.md
+## Laporan 114 — 23 Feb 2026, 12:29
+Tanggal laporan: 23 Feb 2026, 12:29
+
+**Ringkasan Pertanyaan**
+Meminta menjalankan Plan 36 untuk generate icon yang sesuai prinsip project.
+
+**Statement Jawaban**
+Plan 36 sudah dieksekusi dengan mengganti `icon.png` menjadi icon baru bertema domain project (PST/email): elemen folder, envelope, dan node struktur untuk merepresentasikan hierarchy/sync.
+
+Validasi hasil:
+- Format icon: PNG
+- Dimensi: 256x256
+- `dotnet pack` berhasil dan package tetap terbentuk normal.
+
+**File Terkait**
+- icon.png
+- src/Emcode.Pst.Libs/Emcode.Pst.Libs.csproj
+- CodexReport.md
+## Laporan 113 — 23 Feb 2026, 12:27
+Tanggal laporan: 23 Feb 2026, 12:27
+
+**Ringkasan Pertanyaan**
+Meminta generate icon yang disesuaikan dengan prinsip project.
+
+**Statement Jawaban**
+Sesuai aturan project untuk perubahan file, plan refactor sudah dibuat di `RefactorPlan.md` sebagai Plan 36 (konsep visual PST/email, validasi keterbacaan, dan output `icon.png`). Menunggu perintah user untuk eksekusi pembuatan icon.
+
+**File Terkait**
+- RefactorPlan.md
+- README.id.md
+- CodexReport.md
+## Laporan 112 — 23 Feb 2026, 12:27
+Tanggal laporan: 23 Feb 2026, 12:27
+
+**Ringkasan Pertanyaan**
+Meminta menjalankan Plan 35 untuk mengisi properti opsional NuGet.
+
+**Statement Jawaban**
+Plan 35 sudah dieksekusi.
+
+Perubahan yang dilakukan:
+- Menambahkan metadata opsional NuGet pada `src/Emcode.Pst.Libs/Emcode.Pst.Libs.csproj`:
+  - `PackageProjectUrl`
+  - `RepositoryType`
+  - `PackageReleaseNotes`
+  - `PackageIcon`
+- Menambahkan file package icon `icon.png` di root project dan mengonfigurasi agar ikut ter-pack.
+- Validasi publish readiness dengan `dotnet pack` berhasil, output package:
+  - `artifacts/Emcode.Pst.Libs.1.0.0.nupkg`
+
+**File Terkait**
+- src/Emcode.Pst.Libs/Emcode.Pst.Libs.csproj
+- icon.png
+- CodexReport.md
+## Laporan 111 — 23 Feb 2026, 12:25
+Tanggal laporan: 23 Feb 2026, 12:25
+
+**Ringkasan Pertanyaan**
+Meminta mengisi properti opsional NuGet di `src/Emcode.Pst.Libs/Emcode.Pst.Libs.csproj`.
+
+**Statement Jawaban**
+Sesuai aturan project untuk perubahan kode, plan refactor sudah dibuat di `RefactorPlan.md` (Plan 35) dan menunggu perintah konfirmasi eksekusi sebelum edit file `.csproj` dilakukan.
+
+**File Terkait**
+- RefactorPlan.md
+- src/Emcode.Pst.Libs/Emcode.Pst.Libs.csproj
+- CodexReport.md
+## Laporan 110 — 23 Feb 2026, 12:24
+Tanggal laporan: 23 Feb 2026, 12:24
+
+**Ringkasan Pertanyaan**
+Meminta pengecekan apakah property di `src/Emcode.Pst.Libs/Emcode.Pst.Libs.csproj` sudah siap untuk upload `nuget.org`.
+
+**Statement Jawaban**
+Hasil cek: property inti untuk publish NuGet sudah tersedia (`PackageId`, `Version`, `Authors`, `Description`, `PackageLicenseExpression`, `PackageReadmeFile`, `RepositoryUrl`) dan item `README.md` sudah dipack ke root package.
+
+Catatan: masih ada properti opsional yang direkomendasikan untuk kualitas metadata (`PackageProjectUrl`, `RepositoryType`, `PackageReleaseNotes`, `PackageIcon`) namun bukan blocker untuk upload.
+
+**File Terkait**
+- src/Emcode.Pst.Libs/Emcode.Pst.Libs.csproj
+- CodexReport.md
+## Laporan 109 — 23 Feb 2026, 12:23
+Tanggal laporan: 23 Feb 2026, 12:23
+
+**Ringkasan Pertanyaan**
+Meminta agar `README.md` mereferensikan `README.id.md`.
+
+**Statement Jawaban**
+Sudah sesuai. File `README.md` saat ini sudah mereferensikan `README.id.md` sebagai dokumentasi utama berbahasa Indonesia, jadi tidak perlu perubahan tambahan.
+
+**File Terkait**
+- README.md
+- CodexReport.md
+## Laporan 108 — 23 Feb 2026, 12:19
+Tanggal laporan: 23 Feb 2026, 12:19
+
+**Ringkasan Pertanyaan**
+Menanyakan langkah agar library bisa di-upload ke `nuget.org`.
+
+**Statement Jawaban**
+Diberikan checklist praktis publish NuGet: lengkapi metadata `.csproj`, build+pack, buat API key di `nuget.org`, tambah source nuget, dan jalankan `dotnet nuget push` untuk file `.nupkg`.
+
+Status project saat dicek:
+- `src/Emcode.Pst.Libs/Emcode.Pst.Libs.csproj` masih minimal dan belum memuat metadata package NuGet.
+
+**File Terkait**
+- src/Emcode.Pst.Libs/Emcode.Pst.Libs.csproj
+- CodexReport.md
 ## Laporan 107 — 16 Feb 2026, 19:12
 Tanggal laporan: 16 Feb 2026, 19:12
 
@@ -1809,6 +2402,37 @@ Menjawab bisa atau tidaknya membuat library .NET C# untuk baca/tulis PST dari re
 
 **File Terkait**
 - `doc/PST-241112.docx`
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
