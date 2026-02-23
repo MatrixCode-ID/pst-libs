@@ -24,6 +24,12 @@ Format mengikuti prinsip [Keep a Changelog](https://keepachangelog.com/en/1.1.0/
 ### Security
 - Belum ada.
 
+## [1.0.5] - 2026-02-23
+
+### Changed
+- Kenaikan versi build package `Emcode.Pst.Libs` dari `1.0.4` ke `1.0.5` untuk publikasi NuGet.
+- Pembaruan `PackageReleaseNotes` pada `src/Emcode.Pst.Libs/Emcode.Pst.Libs.csproj`.
+
 ## [1.0.4] - 2026-02-23
 
 ### Added
