@@ -1,3 +1,34 @@
+## Plan 57 — 24 Feb 2026, 10:59
+Tanggal plan: 24 Feb 2026, 10:59
+
+**Ringkasan**
+Eksekusi fase awal migrasi `doc/pages` ke Vue framework (Vite + Vue Router) dan penyesuaian pipeline GitHub Pages ke mode build.
+
+**Sumber**
+- Perintah user untuk menjalankan plan migrasi Vue — 24 Feb 2026
+
+**Lingkup**
+- doc/pages/index.html
+- doc/pages/package.json
+- doc/pages/package-lock.json
+- doc/pages/vite.config.js
+- doc/pages/src/**
+- .github/workflows/pages.yml
+- .gitignore
+
+**Rencana Prioritas**
+1. Scaffold aplikasi Vue di `doc/pages` dengan Vite.
+2. Implementasi router untuk area Home, Help, TOC, dan API overview/namespaces.
+3. Implementasi layout dokumentasi (sidebar + theme toggle) di Vue app.
+4. Update workflow `pages.yml` agar menjalankan `npm ci` + `npm run build` dan publish `doc/pages/dist`.
+5. Verifikasi build lokal sukses dan rapikan artefak lokal (`node_modules`, `dist`) agar tidak masuk repo.
+
+**Kriteria Selesai**
+- `doc/pages` berjalan sebagai source Vue app.
+- Build `npm run build` menghasilkan output static `dist` tanpa error.
+- Workflow Pages publish dari `dist`.
+- Repo bersih dari artefak local-only build.
+
 ## Plan 56 — 24 Feb 2026, 10:52
 Tanggal plan: 24 Feb 2026, 10:52
 

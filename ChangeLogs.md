@@ -24,6 +24,18 @@ Format mengikuti prinsip [Keep a Changelog](https://keepachangelog.com/en/1.1.0/
 ### Security
 - Belum ada.
 
+## [1.0.8] - 2026-02-24
+
+### Added
+- Source dokumentasi berbasis Vue + Vite di `doc/pages` (`src/`, `router`, `views`, `styles`).
+- Konfigurasi build docs frontend (`package.json`, `vite.config.js`) untuk output statis GitHub Pages.
+
+### Changed
+- Entry docs `doc/pages/index.html` diubah ke SPA entry point Vue.
+- Workflow GitHub Pages diupdate agar build docs terlebih dahulu (`npm ci`, `npm run build`) lalu publish `doc/pages/dist`.
+- `.gitignore` diperbarui untuk mengabaikan artefak frontend lokal (`node_modules`, `doc/pages/dist`).
+- Kenaikan versi build package `Emcode.Pst.Libs` dari `1.0.7` ke `1.0.8`.
+
 ## [1.0.7] - 2026-02-24
 
 ### Added
