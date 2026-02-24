@@ -1,3 +1,25 @@
+## Laporan 160 — 24 Feb 2026, 11:17
+Tanggal laporan: 24 Feb 2026, 11:17
+
+**Ringkasan Pertanyaan**
+Meminta cara menjalankan doc/pages di local PC untuk pengujian.
+
+**Statement Jawaban**
+Panduan menjalankan docs lokal diberikan menggunakan Node.js + npm dengan dua opsi: mode dev (
+pm run dev) dan mode build+preview (
+pm run build lalu 
+pm run preview).
+
+Langkah yang dijelaskan:
+- Buka terminal di folder doc/pages.
+- Install dependency via 
+pm ci (atau 
+pm install jika lockfile belum sinkron).
+- Jalankan server dev untuk test cepat atau preview hasil build untuk simulasi produksi.
+- Akses URL lokal dari output Vite (umumnya http://localhost:5173).
+
+**File Terkait**
+- CodexReport.md
 ## Laporan 159 — 24 Feb 2026, 11:12
 Tanggal laporan: 24 Feb 2026, 11:12
 
@@ -2973,6 +2995,7 @@ Menjawab bisa atau tidaknya membuat library .NET C# untuk baca/tulis PST dari re
 
 **File Terkait**
 - `doc/PST-241112.docx`
+
 
 
 
