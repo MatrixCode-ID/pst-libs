@@ -4,7 +4,9 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>PstNdbWriter</title>
+
   <link rel="stylesheet" href="../../assets/css/site.css" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/themes/prism.min.css" />
 </head>
 <body>
   <main>
@@ -16,37 +18,57 @@ Assembly: <code>Emcode.Pst.Libs</code></p>
 <pre><code class="language-csharp">public sealed class PstNdbWriter : IPstWriter, IPstWriterWithContext, IDisposable
 </code></pre>
 <h2 id="constructors">Constructors</h2>
-<ul>
-<li><code>PstNdbWriter()</code></li>
-<li><code>PstNdbWriter(PstFormat format)</code></li>
-</ul>
+<table>
+<thead><tr><th>Constructor</th><th>Keterangan</th></tr></thead>
+<tbody>
+<tr><td><code>PstNdbWriter()</code></td><td>Membuat writer NDB dengan opsi LTP default.</td></tr>
+<tr><td><code>PstNdbWriter(PstFormat format)</code></td><td>Membuat writer NDB dengan opsi LTP default.</td></tr>
+</tbody></table>
+<h2 id="properties">Properties</h2>
+<table>
+<thead><tr><th>Property</th><th>Type</th><th>Keterangan</th></tr></thead>
+<tbody>
+<tr><td colspan="3">Tidak ada property publik.</td></tr>
+</tbody></table>
 <h2 id="methods">Methods</h2>
-<ul>
-<li><code>void Initialize(PstWriteContext context)</code></li>
-<li><code>Task InitializeAsync(PstWriteContext context, CancellationToken cancellationToken = default)</code></li>
-<li><code>PstFolder CreateFolder(string name, PstFolder? parent)</code></li>
-<li><code>Task&lt;PstFolder&gt; CreateFolderAsync(string name, PstFolder? parent, CancellationToken cancellationToken = default)</code></li>
-<li><code>PstMessage CreateMessage(PstFolder folder, PstMessageDraft draft)</code></li>
-<li><code>Task&lt;PstMessage&gt; CreateMessageAsync(PstFolder folder, PstMessageDraft draft, CancellationToken cancellationToken = default)</code></li>
-<li><code>PstMessage ImportEml(PstFolder folder, string emlPath)</code></li>
-<li><code>Task&lt;PstMessage&gt; ImportEmlAsync(PstFolder folder, string emlPath, CancellationToken cancellationToken = default)</code></li>
-<li><code>void UpdateMessage(PstMessage message, PstMessageDraft draft)</code></li>
-<li><code>Task UpdateMessageAsync(PstMessage message, PstMessageDraft draft, CancellationToken cancellationToken = default)</code></li>
-<li><code>void DeleteMessage(PstMessage message)</code></li>
-<li><code>Task DeleteMessageAsync(PstMessage message, CancellationToken cancellationToken = default)</code></li>
-<li><code>void Dispose()</code></li>
-</ul>
-<h2 id="remarks">Remarks</h2>
-<p><code>UpdateMessage</code> dan <code>DeleteMessage</code> pada implementasi ini masih menandakan belum didukung.</p>
+<table>
+<thead><tr><th>Method</th><th>Return Type</th><th>Keterangan</th></tr></thead>
+<tbody>
+<tr><td><code>void Initialize(PstWriteContext context)</code></td><td><code>void</code></td><td>Menginisialisasi writer dengan konteks PST.</td></tr>
+<tr><td><code>Task InitializeAsync(PstWriteContext context, CancellationToken cancellationToken = default)</code></td><td><code>Task</code></td><td>Menginisialisasi writer dengan konteks PST secara asynchronous.</td></tr>
+<tr><td><code>PstFolder CreateFolder(string name, PstFolder? parent)</code></td><td><code>PstFolder</code></td><td>Membuat folder baru pada PST dan menulis node ke disk.</td></tr>
+<tr><td><code>Task&lt;PstFolder&gt; CreateFolderAsync(string name, PstFolder? parent, CancellationToken cancellationToken = default)</code></td><td><code>Task&lt;PstFolder&gt;</code></td><td>Membuat folder baru pada PST secara asynchronous.</td></tr>
+<tr><td><code>PstMessage CreateMessage(PstFolder folder, PstMessageDraft draft)</code></td><td><code>PstMessage</code></td><td>Membuat pesan baru pada folder tertentu dan menulis node ke disk.</td></tr>
+<tr><td><code>Task&lt;PstMessage&gt; CreateMessageAsync(PstFolder folder, PstMessageDraft draft, CancellationToken cancellationToken = default)</code></td><td><code>Task&lt;PstMessage&gt;</code></td><td>Membuat pesan baru pada folder tertentu secara asynchronous.</td></tr>
+<tr><td><code>PstMessage ImportEml(PstFolder folder, string emlPath)</code></td><td><code>PstMessage</code></td><td>Mengimpor file .eml ke folder PST sebagai pesan baru.</td></tr>
+<tr><td><code>Task&lt;PstMessage&gt; ImportEmlAsync(PstFolder folder, string emlPath, CancellationToken cancellationToken = default)</code></td><td><code>Task&lt;PstMessage&gt;</code></td><td>Mengimpor file .eml ke folder PST sebagai pesan baru secara asynchronous.</td></tr>
+<tr><td><code>void UpdateMessage(PstMessage message, PstMessageDraft draft)</code></td><td><code>void</code></td><td>Memperbarui pesan yang sudah ada (belum didukung).</td></tr>
+<tr><td><code>Task UpdateMessageAsync(PstMessage message, PstMessageDraft draft, CancellationToken cancellationToken = default)</code></td><td><code>Task</code></td><td>Memperbarui pesan yang sudah ada secara asynchronous (belum didukung).</td></tr>
+<tr><td><code>void DeleteMessage(PstMessage message)</code></td><td><code>void</code></td><td>Menghapus pesan dari PST (belum didukung).</td></tr>
+<tr><td><code>Task DeleteMessageAsync(PstMessage message, CancellationToken cancellationToken = default)</code></td><td><code>Task</code></td><td>Menghapus pesan dari PST secara asynchronous (belum didukung).</td></tr>
+<tr><td><code>void Dispose()</code></td><td><code>void</code></td><td>Melepas resource stream dan melakukan commit BBT/NBT.</td></tr>
+</tbody></table>
 <h2 id="events">Events</h2>
-<ul>
-<li>Tidak ada event publik.</li>
-</ul>
+<table>
+<thead><tr><th>Event</th><th>Type</th><th>Keterangan</th></tr></thead>
+<tbody>
+<tr><td colspan="3">Tidak ada event publik.</td></tr>
+</tbody></table>
+<h2 id="remarks">Remarks</h2>
+<p>Referensi ini merangkum member publik dari object dan keterangan perilaku dasarnya berdasarkan XML documentation source code.</p>
 
   </main>
+  <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/components/prism-core.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/components/prism-clike.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/components/prism-csharp.min.js"></script>
   <script src="../../assets/js/theme.js"></script>
 </body>
 </html>
+
+
+
+
+
 
 
 

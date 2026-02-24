@@ -24,6 +24,19 @@ Format mengikuti prinsip [Keep a Changelog](https://keepachangelog.com/en/1.1.0/
 ### Security
 - Belum ada.
 
+## [1.0.7] - 2026-02-24
+
+### Added
+- Sidebar dokumentasi global pada seluruh halaman `doc/pages` (Home, Help, TOC, API References).
+- Integrasi `Prism.js` pada semua halaman yang memiliki block code C# (`language-csharp`).
+
+### Changed
+- Format seluruh halaman object API diseragamkan ke pola referensi bergaya Microsoft Docs (`Constructors`, `Properties`, `Methods`, `Events`, `Fields` untuk enum).
+- Halaman Help diperbarui dengan layout sidebar navigasi kiri yang konsisten.
+- Sinkronisasi tema Prism dengan mode dokumentasi (`light`/`dark`).
+- Pembaruan aturan `AGENTS.md` agar eksekusi script PowerShell wajib menggunakan PowerShell 7+ (`pwsh`).
+- Kenaikan versi build package `Emcode.Pst.Libs` dari `1.0.6` ke `1.0.7`.
+
 ## [1.0.6] - 2026-02-23
 
 ### Changed

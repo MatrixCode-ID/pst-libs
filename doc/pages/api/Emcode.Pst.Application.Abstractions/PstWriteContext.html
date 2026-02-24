@@ -4,7 +4,9 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>PstWriteContext</title>
+
   <link rel="stylesheet" href="../../assets/css/site.css" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/themes/prism.min.css" />
 </head>
 <body>
   <main>
@@ -16,25 +18,47 @@ Assembly: <code>Emcode.Pst.Libs</code></p>
 <pre><code class="language-csharp">public sealed class PstWriteContext
 </code></pre>
 <h2 id="constructors">Constructors</h2>
-<ul>
-<li><code>PstWriteContext(string path, PstOpenOptions options, PstFolder? rootFolder, List&lt;PstFolder&gt; folders)</code></li>
-</ul>
+<table>
+<thead><tr><th>Constructor</th><th>Keterangan</th></tr></thead>
+<tbody>
+<tr><td><code>PstWriteContext(string path, PstOpenOptions options, PstFolder? rootFolder, List&lt;PstFolder&gt; folders)</code></td><td>Membuat konteks write dengan data PST yang sudah dibaca.</td></tr>
+</tbody></table>
 <h2 id="properties">Properties</h2>
-<ul>
-<li><code>string Path</code></li>
-<li><code>PstOpenOptions Options</code></li>
-<li><code>PstFolder? RootFolder</code></li>
-<li><code>List&lt;PstFolder&gt; Folders</code></li>
-</ul>
+<table>
+<thead><tr><th>Property</th><th>Type</th><th>Keterangan</th></tr></thead>
+<tbody>
+<tr><td><code>Path</code></td><td><code>string</code></td><td>Lokasi file PST yang sedang dibuka.</td></tr>
+<tr><td><code>Options</code></td><td><code>PstOpenOptions</code></td><td>Opsi pembukaan PST yang digunakan.</td></tr>
+<tr><td><code>RootFolder</code></td><td><code>PstFolder?</code></td><td>Folder root PST bila tersedia.</td></tr>
+<tr><td><code>Folders</code></td><td><code>List&lt;PstFolder&gt;</code></td><td>Daftar folder yang dapat diperbarui oleh writer.</td></tr>
+</tbody></table>
+<h2 id="methods">Methods</h2>
+<table>
+<thead><tr><th>Method</th><th>Return Type</th><th>Keterangan</th></tr></thead>
+<tbody>
+<tr><td colspan="3">Tidak ada method publik.</td></tr>
+</tbody></table>
 <h2 id="events">Events</h2>
-<ul>
-<li>Tidak ada event publik.</li>
-</ul>
+<table>
+<thead><tr><th>Event</th><th>Type</th><th>Keterangan</th></tr></thead>
+<tbody>
+<tr><td colspan="3">Tidak ada event publik.</td></tr>
+</tbody></table>
+<h2 id="remarks">Remarks</h2>
+<p>Referensi ini merangkum member publik dari object dan keterangan perilaku dasarnya berdasarkan XML documentation source code.</p>
 
   </main>
+  <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/components/prism-core.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/components/prism-clike.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/components/prism-csharp.min.js"></script>
   <script src="../../assets/js/theme.js"></script>
 </body>
 </html>
+
+
+
+
+
 
 
 

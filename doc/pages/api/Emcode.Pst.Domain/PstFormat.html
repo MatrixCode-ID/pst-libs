@@ -4,7 +4,9 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>PstFormat</title>
+
   <link rel="stylesheet" href="../../assets/css/site.css" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/themes/prism.min.css" />
 </head>
 <body>
   <main>
@@ -16,16 +18,26 @@ Assembly: <code>Emcode.Pst.Libs</code></p>
 <pre><code class="language-csharp">public enum PstFormat
 </code></pre>
 <h2 id="fields">Fields</h2>
-<ul>
-<li><code>Unknown = 0</code></li>
-<li><code>Ansi = 1</code></li>
-<li><code>Unicode = 2</code></li>
-</ul>
+<table>
+<thead><tr><th>Field</th><th>Value</th><th>Keterangan</th></tr></thead>
+<tbody>
+<tr><td><code>Unknown</code></td><td><code>0</code></td><td>Format tidak diketahui atau belum terdeteksi.</td></tr>
+<tr><td><code>Ansi</code></td><td><code>1</code></td><td>PST format ANSI (versi lama).</td></tr>
+<tr><td><code>Unicode</code></td><td><code>2</code></td><td>PST format Unicode (versi baru).</td></tr>
+</tbody></table>
 
   </main>
+  <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/components/prism-core.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/components/prism-clike.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/components/prism-csharp.min.js"></script>
   <script src="../../assets/js/theme.js"></script>
 </body>
 </html>
+
+
+
+
+
 
 
 

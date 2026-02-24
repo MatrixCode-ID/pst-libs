@@ -1,3 +1,238 @@
+## Laporan 155 — 24 Feb 2026, 10:52
+Tanggal laporan: 24 Feb 2026, 10:52
+
+**Ringkasan Pertanyaan**
+Meminta dibuatkan plan untuk kemungkinan migrasi `doc/pages` ke framework Vue atau React, sekaligus menilai mana yang lebih baik.
+
+**Statement Jawaban**
+Plan migrasi sudah ditambahkan di `RefactorPlan.md` sebagai **Plan 56**.
+
+Isi utama plan:
+- Menentukan arsitektur docs berbasis framework dengan output static untuk GitHub Pages.
+- Evaluasi Vue vs React berdasarkan:
+  - kompleksitas setup/maintenance,
+  - kecepatan implementasi fitur docs,
+  - performa/bundle size,
+  - kecocokan skill tim.
+- Menyusun POC minimal (Home + Help + API) sebelum migrasi penuh.
+- Integrasi build ke workflow Pages.
+- Migrasi bertahap dari HTML statis ke source framework.
+
+Rekomendasi awal:
+- **Vue** lebih disarankan untuk kondisi saat ini karena lebih ringan dan cepat untuk kebutuhan dokumentasi statis-interaktif.
+- **React** tetap opsi valid bila tim sudah dominan React.
+
+**File Terkait**
+- RefactorPlan.md
+- CodexReport.md
+
+## Laporan 154 — 24 Feb 2026, 10:50
+Tanggal laporan: 24 Feb 2026, 10:50
+
+**Ringkasan Pertanyaan**
+Melaporkan Prism tidak mengikuti dark mode.
+
+**Statement Jawaban**
+Integrasi Prism sudah diperbaiki agar theme syntax highlighting mengikuti mode dokumentasi.
+
+Perubahan:
+- Menambahkan fungsi sinkronisasi Prism theme di `theme.js`.
+- Saat `applyTheme` dipanggil:
+  - mode `light` -> Prism menggunakan `prism.min.css`
+  - mode `dark` -> Prism menggunakan `prism-okaidia.min.css`
+- URL base Prism diambil dari link Prism yang sudah ada, dengan fallback ke CDN Prism 1.29.0.
+
+Hasil:
+- Toggle dark/light sekarang mengubah tampilan code block Prism sesuai mode aktif.
+
+**File Terkait**
+- doc/pages/assets/js/theme.js
+- RefactorPlan.md
+- CodexReport.md
+
+## Laporan 153 — 24 Feb 2026, 10:47
+Tanggal laporan: 24 Feb 2026, 10:47
+
+**Ringkasan Pertanyaan**
+Meminta memasang `Prism.js` pada semua halaman `doc/pages` yang memiliki block code C#.
+
+**Statement Jawaban**
+`Prism.js` sudah dipasang di semua halaman yang memiliki `language-csharp` (total 26 file).
+
+Perubahan yang dilakukan:
+- Menambahkan Prism stylesheet:
+  - `https://cdn.jsdelivr.net/npm/prismjs@1.29.0/themes/prism.min.css`
+- Menambahkan script Prism:
+  - `prism-core.min.js`
+  - `prism-clike.min.js`
+  - `prism-csharp.min.js`
+- Script Prism disisipkan sebelum `theme.js` pada setiap halaman target.
+- Melakukan validasi dan perbaikan struktur HTML pada file target agar elemen penting tetap ada:
+  - `<!DOCTYPE html>`, `<html>`, `<head>`, `<meta charset>`, `<meta viewport>`, `<title>`, `site.css`, `theme.js`.
+
+**File Terkait**
+- doc/pages/help/getting-started.html
+- doc/pages/help/how-to/open-and-read.html
+- doc/pages/help/how-to/create-folder-and-message.html
+- doc/pages/help/how-to/import-eml.html
+- doc/pages/api/Emcode.Pst.Application/PstFile.html
+- doc/pages/api/Emcode.Pst.Application/PstOpenOptions.html
+- doc/pages/api/Emcode.Pst.Application.Abstractions/IPstReader.html
+- doc/pages/api/Emcode.Pst.Application.Abstractions/IPstWriter.html
+- doc/pages/api/Emcode.Pst.Application.Abstractions/IPstWriterWithContext.html
+- doc/pages/api/Emcode.Pst.Application.Abstractions/PstReadResult.html
+- doc/pages/api/Emcode.Pst.Application.Abstractions/PstWriteContext.html
+- doc/pages/api/Emcode.Pst.Domain/PstAttachment.html
+- doc/pages/api/Emcode.Pst.Domain/PstCryptMethod.html
+- doc/pages/api/Emcode.Pst.Domain/PstDraftAttachment.html
+- doc/pages/api/Emcode.Pst.Domain/PstDraftRecipient.html
+- doc/pages/api/Emcode.Pst.Domain/PstFolder.html
+- doc/pages/api/Emcode.Pst.Domain/PstFormat.html
+- doc/pages/api/Emcode.Pst.Domain/PstHeaderInfo.html
+- doc/pages/api/Emcode.Pst.Domain/PstMessage.html
+- doc/pages/api/Emcode.Pst.Domain/PstMessageDraft.html
+- doc/pages/api/Emcode.Pst.Domain/PstRecipient.html
+- doc/pages/api/Emcode.Pst.Domain/PstRecipientType.html
+- doc/pages/api/Emcode.Pst.Infrastructure/PstInMemoryWriter.html
+- doc/pages/api/Emcode.Pst.Infrastructure/PstMinimalReader.html
+- doc/pages/api/Emcode.Pst.Infrastructure/PstNdbReader.html
+- doc/pages/api/Emcode.Pst.Infrastructure/PstNdbWriter.html
+- RefactorPlan.md
+- CodexReport.md
+
+## Laporan 152 — 24 Feb 2026, 10:41
+Tanggal laporan: 24 Feb 2026, 10:41
+
+**Ringkasan Pertanyaan**
+Meminta sidebar diterapkan ke semua halaman dokumentasi termasuk `API Reference` dan `index`.
+
+**Statement Jawaban**
+Sidebar sudah diperluas ke seluruh halaman docs secara global melalui script `theme.js`, sehingga halaman `index`, `toc`, `api/*`, dan `help/*` semuanya memiliki navigasi kiri.
+
+Perubahan yang dilakukan:
+- Menambahkan injeksi sidebar global di `theme.js` untuk semua halaman yang memuat script docs.
+- Menambahkan struktur navigasi global:
+  - Home, TOC
+  - Help (overview, getting-started, concepts, how-to, faq)
+  - API References (overview, namespaces, per-namespace index)
+- Menambahkan active state otomatis berbasis URL.
+- Menjaga kompatibilitas halaman Help yang sudah punya sidebar statis (tidak dibuat ganda).
+- Menambahkan dukungan class layout baru `docs-layout` di CSS agar sidebar berlaku lintas halaman.
+
+**File Terkait**
+- doc/pages/assets/js/theme.js
+- doc/pages/assets/css/site.css
+- RefactorPlan.md
+- CodexReport.md
+
+## Laporan 151 — 24 Feb 2026, 10:39
+Tanggal laporan: 24 Feb 2026, 10:39
+
+**Ringkasan Pertanyaan**
+Meminta update halaman `Help` agar punya sidebar seperti pola dokumentasi Microsoft Learn.
+
+**Statement Jawaban**
+Halaman `Help` sudah diperbarui dengan sidebar navigasi kiri yang konsisten di semua halaman help.
+
+Perubahan yang dilakukan:
+- Menambahkan layout shell `doc-shell` untuk memisahkan area `sidebar` dan `content`.
+- Menambahkan komponen sidebar `doc-sidebar` berisi:
+  - Overview, Getting Started, Concepts
+  - Grup How-To (Open and Read, Create Folder and Message, Import EML)
+  - FAQ
+  - Link ke `API References` dan `TOC`
+- Menambahkan active state (`is-active`) pada menu sesuai halaman yang dibuka.
+- Menambahkan style CSS untuk sidebar + layout responsive mobile agar fallback ke single-column.
+
+**File Terkait**
+- doc/pages/assets/css/site.css
+- doc/pages/help/index.html
+- doc/pages/help/getting-started.html
+- doc/pages/help/concepts.html
+- doc/pages/help/faq.html
+- doc/pages/help/how-to/open-and-read.html
+- doc/pages/help/how-to/create-folder-and-message.html
+- doc/pages/help/how-to/import-eml.html
+- RefactorPlan.md
+- CodexReport.md
+
+## Laporan 150 — 24 Feb 2026, 10:34
+Tanggal laporan: 24 Feb 2026, 10:34
+
+**Ringkasan Pertanyaan**
+Meminta update `AGENTS.md` agar agent menggunakan script PowerShell versi 7 (atau terbaru), dan jika belum terinstall harus meminta user install PowerShell 7 terlebih dahulu.
+
+**Statement Jawaban**
+`AGENTS.md` sudah diperbarui dengan aturan baru pada section `POWERSHELL EXECUTION RULES`.
+
+Perubahan yang ditambahkan:
+- Agent wajib menggunakan PowerShell 7 (`pwsh`) atau versi lebih baru untuk menjalankan script PowerShell.
+- Jika PowerShell 7 belum terinstall, agent wajib meminta user install PowerShell 7 terlebih dahulu.
+- Agent tidak boleh melanjutkan eksekusi script PowerShell sebelum instalasi PowerShell 7 selesai.
+
+**File Terkait**
+- AGENTS.md
+- RefactorPlan.md
+- CodexReport.md
+
+## Laporan 149 — 24 Feb 2026, 10:32
+Tanggal laporan: 24 Feb 2026, 10:32
+
+**Ringkasan Pertanyaan**
+Meminta update ke semua halaman API object lainnya agar format mengikuti style referensi API Microsoft (`properties`, `methods`, `events`, dll).
+
+**Statement Jawaban**
+Semua halaman API object di area `doc/pages/api/*/*.html` sudah diperbarui dengan format referensi yang konsisten.
+
+Perubahan utama:
+- Menstandarkan struktur halaman object menjadi:
+  - `Definition`
+  - `Constructors`
+  - `Properties`
+  - `Methods`
+  - `Events`
+  - `Remarks`
+- Untuk object bertipe enum, menggunakan tabel `Fields` berisi nama nilai enum, value, dan keterangan.
+- Mengisi keterangan member dari XML documentation source C# agar deskripsi per property/method/field konsisten.
+- Mempertahankan section `See Also` pada halaman yang sebelumnya sudah memilikinya.
+
+Halaman yang diperbarui mencakup namespace:
+- `Emcode.Pst.Application`
+- `Emcode.Pst.Application.Abstractions`
+- `Emcode.Pst.Domain`
+- `Emcode.Pst.Infrastructure`
+
+Total halaman object API yang diperbarui: 22 file.
+
+**File Terkait**
+- doc/pages/api/Emcode.Pst.Application/*.html
+- doc/pages/api/Emcode.Pst.Application.Abstractions/*.html
+- doc/pages/api/Emcode.Pst.Domain/*.html
+- doc/pages/api/Emcode.Pst.Infrastructure/*.html
+- RefactorPlan.md
+- CodexReport.md
+
+## Laporan 148 — 24 Feb 2026, 10:22
+Tanggal laporan: 24 Feb 2026, 10:22
+
+**Ringkasan Pertanyaan**
+Meminta update halaman help/API agar formatnya mirip Microsoft Docs (contoh `BinaryWriter`) dengan keterangan untuk `properties`, `methods`, `events`, dll.
+
+**Statement Jawaban**
+Halaman API `PstAttachment` sudah diperbarui ke format referensi yang lebih mirip Microsoft Docs.
+
+Perubahan yang dilakukan:
+- Menambahkan section `Constructors` dalam bentuk tabel dengan deskripsi constructor.
+- Mengubah `Properties` menjadi tabel berisi nama property, tipe data, dan keterangan.
+- Mengubah `Methods` menjadi tabel berisi signature, return type, dan keterangan.
+- Mempertahankan section `Events` dan menegaskan tidak ada event publik.
+- Menambahkan section `Remarks` untuk menjelaskan perilaku saat sumber konten attachment tidak tersedia.
+
+**File Terkait**
+- doc/pages/api/Emcode.Pst.Domain/PstAttachment.html
+- RefactorPlan.md
+- CodexReport.md
+
 ## Laporan 147 — 23 Feb 2026, 14:45
 Tanggal laporan: 23 Feb 2026, 14:45
 

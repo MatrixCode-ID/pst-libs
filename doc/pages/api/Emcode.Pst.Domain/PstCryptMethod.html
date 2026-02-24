@@ -4,7 +4,9 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>PstCryptMethod</title>
+
   <link rel="stylesheet" href="../../assets/css/site.css" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/themes/prism.min.css" />
 </head>
 <body>
   <main>
@@ -16,17 +18,27 @@ Assembly: <code>Emcode.Pst.Libs</code></p>
 <pre><code class="language-csharp">public enum PstCryptMethod
 </code></pre>
 <h2 id="fields">Fields</h2>
-<ul>
-<li><code>None = 0x00</code></li>
-<li><code>Permute = 0x01</code></li>
-<li><code>Cyclic = 0x02</code></li>
-<li><code>EdpEncrypted = 0x10</code></li>
-</ul>
+<table>
+<thead><tr><th>Field</th><th>Value</th><th>Keterangan</th></tr></thead>
+<tbody>
+<tr><td><code>None</code></td><td><code>0x00</code></td><td>Data blok tidak dienkode atau dienkripsi.</td></tr>
+<tr><td><code>Permute</code></td><td><code>0x01</code></td><td>Data blok dienkode menggunakan algoritma Permutation.</td></tr>
+<tr><td><code>Cyclic</code></td><td><code>0x02</code></td><td>Data blok dienkode menggunakan algoritma Cyclic.</td></tr>
+<tr><td><code>EdpEncrypted</code></td><td><code>0x10</code></td><td>Data blok dienkripsi dengan Windows Information Protection (EDP).</td></tr>
+</tbody></table>
 
   </main>
+  <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/components/prism-core.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/components/prism-clike.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/components/prism-csharp.min.js"></script>
   <script src="../../assets/js/theme.js"></script>
 </body>
 </html>
+
+
+
+
+
 
 
 

@@ -132,3 +132,90 @@ table {
     padding: 18px;
   }
 }
+
+body.help-layout main,
+body.docs-layout main {
+  max-width: none;
+  margin: 0;
+}
+
+.doc-shell {
+  max-width: 1280px;
+  margin: 24px auto;
+  display: grid;
+  grid-template-columns: 300px minmax(0, 1fr);
+  gap: 20px;
+  align-items: start;
+}
+
+.doc-sidebar {
+  position: sticky;
+  top: 18px;
+  padding: 18px;
+  background: var(--doc-surface);
+  border: 1px solid var(--doc-border);
+  border-radius: 12px;
+}
+
+.doc-sidebar h2 {
+  margin: 0 0 12px;
+  font-size: 1rem;
+}
+
+.doc-sidebar ul {
+  list-style: none;
+  margin: 0;
+  padding-left: 0;
+}
+
+.doc-sidebar li + li {
+  margin-top: 4px;
+}
+
+.doc-sidebar .nav-group {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--doc-border);
+}
+
+.doc-sidebar .nav-sub {
+  margin-top: 6px;
+  padding-left: 14px;
+}
+
+.doc-sidebar a {
+  display: block;
+  padding: 4px 8px;
+  border-radius: 8px;
+  text-decoration: none;
+}
+
+.doc-sidebar a:hover {
+  background: var(--doc-code-bg);
+  text-decoration: none;
+}
+
+.doc-sidebar a.is-active {
+  background: var(--doc-code-bg);
+  font-weight: 600;
+}
+
+.doc-content {
+  min-width: 0;
+}
+
+@media (max-width: 960px) {
+  .doc-shell {
+    grid-template-columns: 1fr;
+    gap: 12px;
+    margin: 0;
+  }
+
+  .doc-sidebar {
+    position: static;
+    margin: 0 0 8px;
+    border-left: 0;
+    border-right: 0;
+    border-radius: 0;
+  }
+}

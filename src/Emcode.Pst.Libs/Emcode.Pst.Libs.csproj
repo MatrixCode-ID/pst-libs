@@ -9,7 +9,7 @@
 
   <PropertyGroup>
     <PackageId>Emcode.Pst.Libs</PackageId>
-    <Version>1.0.6</Version>
+    <Version>1.0.7</Version>
     <Authors>Aan Dahliansyah</Authors>
     <Company>MatrixCode</Company>
     <Description>Library untuk baca/tulis PST.</Description>
@@ -17,7 +17,7 @@
     <PackageProjectUrl>https://github.com/MatrixCode-ID/pst-libs</PackageProjectUrl>
     <RepositoryUrl>https://github.com/MatrixCode-ID/pst-libs</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
-    <PackageReleaseNotes>Build release 1.0.6 untuk publikasi paket NuGet.</PackageReleaseNotes>
+    <PackageReleaseNotes>Build release 1.0.7 untuk pembaruan dokumentasi dan publikasi paket NuGet.</PackageReleaseNotes>
     <PackageReadmeFile>README.id.md</PackageReadmeFile>
     <PackageIcon>icon.png</PackageIcon>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>

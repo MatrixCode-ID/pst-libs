@@ -4,7 +4,9 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>PstRecipient</title>
+
   <link rel="stylesheet" href="../../assets/css/site.css" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/themes/prism.min.css" />
 </head>
 <body>
   <main>
@@ -15,23 +17,49 @@ Assembly: <code>Emcode.Pst.Libs</code></p>
 <h2 id="definition">Definition</h2>
 <pre><code class="language-csharp">public sealed class PstRecipient
 </code></pre>
+<h2 id="constructors">Constructors</h2>
+<table>
+<thead><tr><th>Constructor</th><th>Keterangan</th></tr></thead>
+<tbody>
+<tr><td><code>PstRecipient()</code></td><td>Membuat instance penerima dengan data minimal.</td></tr>
+</tbody></table>
 <h2 id="properties">Properties</h2>
-<ul>
-<li><code>int? RecipientType</code></li>
-<li><code>string? EmailAddress</code></li>
-<li><code>string? DisplayName</code></li>
-<li><code>string? AddressType</code></li>
-<li><code>string? SmtpAddress</code></li>
-</ul>
+<table>
+<thead><tr><th>Property</th><th>Type</th><th>Keterangan</th></tr></thead>
+<tbody>
+<tr><td><code>RecipientType</code></td><td><code>int?</code></td><td>Jenis penerima (To, Cc, Bcc) sesuai PidTagRecipientType.</td></tr>
+<tr><td><code>EmailAddress</code></td><td><code>string?</code></td><td>Alamat email penerima sesuai PidTagEmailAddress.</td></tr>
+<tr><td><code>DisplayName</code></td><td><code>string?</code></td><td>Nama tampilan penerima bila tersedia.</td></tr>
+<tr><td><code>AddressType</code></td><td><code>string?</code></td><td>Tipe alamat penerima (contoh: SMTP).</td></tr>
+<tr><td><code>SmtpAddress</code></td><td><code>string?</code></td><td>Alamat SMTP penerima bila tersedia.</td></tr>
+</tbody></table>
+<h2 id="methods">Methods</h2>
+<table>
+<thead><tr><th>Method</th><th>Return Type</th><th>Keterangan</th></tr></thead>
+<tbody>
+<tr><td colspan="3">Tidak ada method publik.</td></tr>
+</tbody></table>
 <h2 id="events">Events</h2>
-<ul>
-<li>Tidak ada event publik.</li>
-</ul>
+<table>
+<thead><tr><th>Event</th><th>Type</th><th>Keterangan</th></tr></thead>
+<tbody>
+<tr><td colspan="3">Tidak ada event publik.</td></tr>
+</tbody></table>
+<h2 id="remarks">Remarks</h2>
+<p>Referensi ini merangkum member publik dari object dan keterangan perilaku dasarnya berdasarkan XML documentation source code.</p>
 
   </main>
+  <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/components/prism-core.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/components/prism-clike.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/components/prism-csharp.min.js"></script>
   <script src="../../assets/js/theme.js"></script>
 </body>
 </html>
+
+
+
+
+
 
 
 

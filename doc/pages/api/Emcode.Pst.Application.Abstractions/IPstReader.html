@@ -4,7 +4,9 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>IPstReader</title>
+
   <link rel="stylesheet" href="../../assets/css/site.css" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/themes/prism.min.css" />
 </head>
 <body>
   <main>
@@ -15,20 +17,46 @@ Assembly: <code>Emcode.Pst.Libs</code></p>
 <h2 id="definition">Definition</h2>
 <pre><code class="language-csharp">public interface IPstReader
 </code></pre>
+<h2 id="constructors">Constructors</h2>
+<table>
+<thead><tr><th>Constructor</th><th>Keterangan</th></tr></thead>
+<tbody>
+<tr><td colspan="2">Tidak ada constructor publik.</td></tr>
+</tbody></table>
+<h2 id="properties">Properties</h2>
+<table>
+<thead><tr><th>Property</th><th>Type</th><th>Keterangan</th></tr></thead>
+<tbody>
+<tr><td colspan="3">Tidak ada property publik.</td></tr>
+</tbody></table>
 <h2 id="methods">Methods</h2>
-<ul>
-<li><code>PstReadResult Read(string path, PstOpenOptions options)</code></li>
-<li><code>Task&lt;PstReadResult&gt; ReadAsync(string path, PstOpenOptions options, CancellationToken cancellationToken = default)</code></li>
-</ul>
+<table>
+<thead><tr><th>Method</th><th>Return Type</th><th>Keterangan</th></tr></thead>
+<tbody>
+<tr><td><code>PstReadResult Read(string path, PstOpenOptions options)</code></td><td><code>PstReadResult</code></td><td>Membaca file PST dan mengembalikan hasil struktur dasarnya.</td></tr>
+<tr><td><code>Task&lt;PstReadResult&gt; ReadAsync(string path, PstOpenOptions options, CancellationToken cancellationToken = default)</code></td><td><code>Task&lt;PstReadResult&gt;</code></td><td>Membaca file PST secara asynchronous dan mengembalikan hasil struktur dasarnya.</td></tr>
+</tbody></table>
 <h2 id="events">Events</h2>
-<ul>
-<li>Tidak ada event publik.</li>
-</ul>
+<table>
+<thead><tr><th>Event</th><th>Type</th><th>Keterangan</th></tr></thead>
+<tbody>
+<tr><td colspan="3">Tidak ada event publik.</td></tr>
+</tbody></table>
+<h2 id="remarks">Remarks</h2>
+<p>Referensi ini merangkum member publik dari object dan keterangan perilaku dasarnya berdasarkan XML documentation source code.</p>
 
   </main>
+  <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/components/prism-core.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/components/prism-clike.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/components/prism-csharp.min.js"></script>
   <script src="../../assets/js/theme.js"></script>
 </body>
 </html>
+
+
+
+
+
 
 
 

@@ -113,3 +113,10 @@ Berlaku saat user meminta commit.
 - Jika diminta audit → jalankan sesuai [AuditRules.md](AuditRules.md)
 - Audit TIDAK boleh membuat log
 - Audit TIDAK boleh membuat plan
+
+### 8. POWERSHELL EXECUTION RULES
+
+- Agent WAJIB menggunakan PowerShell 7 (pwsh) atau versi yang lebih baru untuk menjalankan script PowerShell.
+- Jika PowerShell 7 belum terinstall:
+  - Agent WAJIB meminta user install PowerShell 7 terlebih dahulu.
+  - Agent TIDAK boleh melanjutkan eksekusi script PowerShell sebelum instalasi selesai.

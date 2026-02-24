@@ -4,7 +4,9 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>PstDraftAttachment</title>
+
   <link rel="stylesheet" href="../../assets/css/site.css" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/themes/prism.min.css" />
 </head>
 <body>
   <main>
@@ -15,28 +17,50 @@ Assembly: <code>Emcode.Pst.Libs</code></p>
 <h2 id="definition">Definition</h2>
 <pre><code class="language-csharp">public sealed class PstDraftAttachment
 </code></pre>
+<h2 id="constructors">Constructors</h2>
+<table>
+<thead><tr><th>Constructor</th><th>Keterangan</th></tr></thead>
+<tbody>
+<tr><td colspan="2">Tidak ada constructor publik.</td></tr>
+</tbody></table>
 <h2 id="properties">Properties</h2>
-<ul>
-<li><code>string? FileName</code></li>
-<li><code>string? LongFileName</code></li>
-<li><code>string? ContentType</code></li>
-<li><code>string? ContentId</code></li>
-<li><code>bool IsInline</code></li>
-<li><code>byte[]? ContentBytes</code></li>
-</ul>
+<table>
+<thead><tr><th>Property</th><th>Type</th><th>Keterangan</th></tr></thead>
+<tbody>
+<tr><td><code>FileName</code></td><td><code>string?</code></td><td>Nama file attachment.</td></tr>
+<tr><td><code>LongFileName</code></td><td><code>string?</code></td><td>Nama file attachment versi panjang bila tersedia.</td></tr>
+<tr><td><code>ContentType</code></td><td><code>string?</code></td><td>Content type attachment (MIME).</td></tr>
+<tr><td><code>ContentId</code></td><td><code>string?</code></td><td>Content-Id attachment untuk inline reference.</td></tr>
+<tr><td><code>IsInline</code></td><td><code>bool</code></td><td>Menandakan attachment inline.</td></tr>
+<tr><td><code>ContentBytes</code></td><td><code>byte[]?</code></td><td>Konten attachment sebagai byte array.</td></tr>
+</tbody></table>
 <h2 id="methods">Methods</h2>
-<ul>
-<li>Tidak ada method publik.</li>
-</ul>
+<table>
+<thead><tr><th>Method</th><th>Return Type</th><th>Keterangan</th></tr></thead>
+<tbody>
+<tr><td colspan="3">Tidak ada method publik.</td></tr>
+</tbody></table>
 <h2 id="events">Events</h2>
-<ul>
-<li>Tidak ada event publik.</li>
-</ul>
+<table>
+<thead><tr><th>Event</th><th>Type</th><th>Keterangan</th></tr></thead>
+<tbody>
+<tr><td colspan="3">Tidak ada event publik.</td></tr>
+</tbody></table>
+<h2 id="remarks">Remarks</h2>
+<p>Referensi ini merangkum member publik dari object dan keterangan perilaku dasarnya berdasarkan XML documentation source code.</p>
 
   </main>
+  <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/components/prism-core.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/components/prism-clike.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/components/prism-csharp.min.js"></script>
   <script src="../../assets/js/theme.js"></script>
 </body>
 </html>
+
+
+
+
+
 
 
 

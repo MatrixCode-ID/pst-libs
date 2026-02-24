@@ -4,7 +4,9 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>PstMessageDraft</title>
+
   <link rel="stylesheet" href="../../assets/css/site.css" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/themes/prism.min.css" />
 </head>
 <body>
   <main>
@@ -15,40 +17,66 @@ Assembly: <code>Emcode.Pst.Libs</code></p>
 <h2 id="definition">Definition</h2>
 <pre><code class="language-csharp">public sealed class PstMessageDraft
 </code></pre>
+<h2 id="constructors">Constructors</h2>
+<table>
+<thead><tr><th>Constructor</th><th>Keterangan</th></tr></thead>
+<tbody>
+<tr><td colspan="2">Tidak ada constructor publik.</td></tr>
+</tbody></table>
 <h2 id="properties">Properties</h2>
-<ul>
-<li><code>string? MessageClass</code></li>
-<li><code>string? FromName</code></li>
-<li><code>string? FromAddress</code></li>
-<li><code>string? Subject</code></li>
-<li><code>string? Body</code></li>
-<li><code>string? HtmlBody</code></li>
-<li><code>string? MessageId</code></li>
-<li><code>DateTimeOffset? SentTime</code></li>
-<li><code>DateTimeOffset? ClientSubmitTime</code></li>
-<li><code>DateTimeOffset? LastModificationTime</code></li>
-<li><code>int? MessageFlags</code></li>
-<li><code>bool IsDraft</code></li>
-<li><code>bool? ReadReceiptRequested</code></li>
-<li><code>bool? DeliveryReceiptRequested</code></li>
-<li><code>int? Importance</code></li>
-<li><code>int? Priority</code></li>
-<li><code>int? Sensitivity</code></li>
-<li><code>string? TransportMessageHeaders</code></li>
-<li><code>string? ConversationTopic</code></li>
-<li><code>byte[]? ConversationIndex</code></li>
-<li><code>IReadOnlyList&lt;PstDraftRecipient&gt; Recipients</code></li>
-<li><code>IReadOnlyList&lt;PstDraftAttachment&gt; Attachments</code></li>
-</ul>
+<table>
+<thead><tr><th>Property</th><th>Type</th><th>Keterangan</th></tr></thead>
+<tbody>
+<tr><td><code>MessageClass</code></td><td><code>string?</code></td><td>Message class MAPI (contoh: IPM.Note).</td></tr>
+<tr><td><code>FromName</code></td><td><code>string?</code></td><td>Nama pengirim (display name).</td></tr>
+<tr><td><code>FromAddress</code></td><td><code>string?</code></td><td>Alamat email pengirim.</td></tr>
+<tr><td><code>Subject</code></td><td><code>string?</code></td><td>Subjek pesan.</td></tr>
+<tr><td><code>Body</code></td><td><code>string?</code></td><td>Body teks biasa.</td></tr>
+<tr><td><code>HtmlBody</code></td><td><code>string?</code></td><td>Body HTML bila tersedia.</td></tr>
+<tr><td><code>MessageId</code></td><td><code>string?</code></td><td>Message-Id dari header MIME bila tersedia.</td></tr>
+<tr><td><code>SentTime</code></td><td><code>DateTimeOffset?</code></td><td>Waktu pengiriman pesan (tanggal pada header).</td></tr>
+<tr><td><code>ClientSubmitTime</code></td><td><code>DateTimeOffset?</code></td><td>Waktu submit pesan dari client ke transport.</td></tr>
+<tr><td><code>LastModificationTime</code></td><td><code>DateTimeOffset?</code></td><td>Waktu modifikasi terakhir pesan.</td></tr>
+<tr><td><code>MessageFlags</code></td><td><code>int?</code></td><td>Flag status message dalam bentuk bitmask MAPI.</td></tr>
+<tr><td><code>IsDraft</code></td><td><code>bool</code></td><td>Menandakan pesan ini diperlakukan sebagai draft.</td></tr>
+<tr><td><code>ReadReceiptRequested</code></td><td><code>bool?</code></td><td>Menandakan permintaan read receipt.</td></tr>
+<tr><td><code>DeliveryReceiptRequested</code></td><td><code>bool?</code></td><td>Menandakan permintaan delivery receipt.</td></tr>
+<tr><td><code>Importance</code></td><td><code>int?</code></td><td>Tingkat importance pesan.</td></tr>
+<tr><td><code>Priority</code></td><td><code>int?</code></td><td>Prioritas pesan.</td></tr>
+<tr><td><code>Sensitivity</code></td><td><code>int?</code></td><td>Tingkat sensitivitas pesan.</td></tr>
+<tr><td><code>TransportMessageHeaders</code></td><td><code>string?</code></td><td>Header transport mentah (RFC822) bila tersedia.</td></tr>
+<tr><td><code>ConversationTopic</code></td><td><code>string?</code></td><td>Topik percakapan (thread topic).</td></tr>
+<tr><td><code>ConversationIndex</code></td><td><code>byte[]?</code></td><td>Indeks percakapan (thread index) dalam bentuk biner.</td></tr>
+<tr><td><code>Recipients</code></td><td><code>IReadOnlyList&lt;PstDraftRecipient&gt;</code></td><td>Daftar penerima pesan (To/Cc/Bcc).</td></tr>
+<tr><td><code>Attachments</code></td><td><code>IReadOnlyList&lt;PstDraftAttachment&gt;</code></td><td>Daftar attachment untuk pesan.</td></tr>
+</tbody></table>
+<h2 id="methods">Methods</h2>
+<table>
+<thead><tr><th>Method</th><th>Return Type</th><th>Keterangan</th></tr></thead>
+<tbody>
+<tr><td colspan="3">Tidak ada method publik.</td></tr>
+</tbody></table>
 <h2 id="events">Events</h2>
-<ul>
-<li>Tidak ada event publik.</li>
-</ul>
+<table>
+<thead><tr><th>Event</th><th>Type</th><th>Keterangan</th></tr></thead>
+<tbody>
+<tr><td colspan="3">Tidak ada event publik.</td></tr>
+</tbody></table>
+<h2 id="remarks">Remarks</h2>
+<p>Referensi ini merangkum member publik dari object dan keterangan perilaku dasarnya berdasarkan XML documentation source code.</p>
 
   </main>
+  <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/components/prism-core.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/components/prism-clike.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/components/prism-csharp.min.js"></script>
   <script src="../../assets/js/theme.js"></script>
 </body>
 </html>
+
+
+
+
+
 
 
 

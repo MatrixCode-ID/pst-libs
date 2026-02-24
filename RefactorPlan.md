@@ -1,3 +1,222 @@
+## Plan 56 — 24 Feb 2026, 10:52
+Tanggal plan: 24 Feb 2026, 10:52
+
+**Ringkasan**
+Menyiapkan rencana migrasi `doc/pages` ke framework frontend (Vue atau React), termasuk evaluasi pilihan framework yang paling cocok untuk dokumentasi statis interaktif.
+
+**Sumber**
+- Permintaan user — 24 Feb 2026
+
+**Lingkup**
+- doc/pages/**
+- (opsional baru) doc-app/** atau docs-app/** sebagai source framework
+- .github/workflows/pages.yml (jika perlu update langkah build)
+
+**Rencana Prioritas**
+1. Tentukan target arsitektur docs:
+   - Source docs berbasis komponen framework.
+   - Output tetap static build untuk GitHub Pages.
+2. Bandingkan Vue vs React untuk use case ini:
+   - Kompleksitas setup & maintain.
+   - Kecepatan implementasi navigasi docs (sidebar, toc, search sederhana, dark mode).
+   - Ukuran bundle dan performa page load.
+   - Kesesuaian skill tim dan maintainability.
+3. Buat POC minimal (1 halaman Home + 1 halaman Help + 1 halaman API):
+   - Routing static-compatible.
+   - Theme toggle + Prism C# + sidebar global.
+4. Integrasikan proses build ke pipeline publish GitHub Pages.
+5. Migrasi konten bertahap dari HTML statis ke source framework (fase per area: Home/Help/API).
+
+**Rekomendasi Awal**
+- Untuk dokumentasi project ini, **Vue (Vite + Vue Router)** lebih efisien sebagai pilihan awal:
+  - Lebih ringan untuk tim kecil dan dokumen-centric UI.
+  - Template syntax lebih langsung untuk markup docs.
+  - Setup cepat untuk static deploy ke GitHub Pages.
+- React tetap valid jika tim sudah dominan React atau ingin ekosistem React yang lebih luas.
+
+**Kriteria Selesai**
+- Keputusan framework disepakati (Vue atau React) dengan alasan teknis yang jelas.
+- POC berhasil build static dan deploy di GitHub Pages.
+- Strategi migrasi konten terdokumentasi dan bisa dijalankan bertahap.
+
+## Plan 55 — 24 Feb 2026, 10:50
+Tanggal plan: 24 Feb 2026, 10:50
+
+**Ringkasan**
+Memperbaiki integrasi Prism agar theme syntax highlighting mengikuti mode `light/dark` dokumentasi.
+
+**Sumber**
+- Permintaan user — 24 Feb 2026
+
+**Lingkup**
+- doc/pages/assets/js/theme.js
+
+**Rencana Prioritas**
+1. Tambahkan sinkronisasi theme Prism di `theme.js`.
+2. Saat mode docs berubah, update stylesheet Prism:
+   - `light` -> `prism.min.css`
+   - `dark` -> `prism-okaidia.min.css`
+3. Pastikan fallback URL tetap tersedia jika pola URL Prism tidak terdeteksi.
+
+**Kriteria Selesai**
+- Saat toggle mode docs, theme Prism ikut berubah sesuai mode aktif.
+- Halaman tanpa Prism tidak terkena side effect.
+
+## Plan 54 — 24 Feb 2026, 10:47
+Tanggal plan: 24 Feb 2026, 10:47
+
+**Ringkasan**
+Memasang `Prism.js` pada seluruh halaman `doc/pages` yang memiliki block code C# (`language-csharp`) untuk syntax highlighting.
+
+**Sumber**
+- Permintaan user — 24 Feb 2026
+
+**Lingkup**
+- doc/pages/help/getting-started.html
+- doc/pages/help/how-to/open-and-read.html
+- doc/pages/help/how-to/create-folder-and-message.html
+- doc/pages/help/how-to/import-eml.html
+- doc/pages/api/**/*.html (halaman object yang memiliki `language-csharp`)
+
+**Rencana Prioritas**
+1. Identifikasi semua halaman yang memiliki code block C#.
+2. Tambahkan stylesheet Prism pada `<head>` untuk halaman target.
+3. Tambahkan script Prism (`core`, `clike`, `csharp`) sebelum `theme.js`.
+4. Pastikan referensi existing (`site.css`, `theme.js`, title/meta/head/html/doctype) tetap valid setelah patch massal.
+
+**Kriteria Selesai**
+- Semua halaman dengan `language-csharp` memiliki Prism CSS + JS.
+- Highlight C# aktif tanpa mempengaruhi halaman tanpa code block C#.
+- Struktur HTML halaman target tetap valid.
+
+## Plan 53 — 24 Feb 2026, 10:41
+Tanggal plan: 24 Feb 2026, 10:41
+
+**Ringkasan**
+Memperluas sidebar dokumentasi ke semua halaman, termasuk `index`, `toc`, dan seluruh area `API References`.
+
+**Sumber**
+- Permintaan user — 24 Feb 2026
+
+**Lingkup**
+- doc/pages/assets/js/theme.js
+- doc/pages/assets/css/site.css
+
+**Rencana Prioritas**
+1. Tambahkan mekanisme injeksi sidebar global di script docs agar otomatis berlaku pada semua halaman yang memuat `theme.js`.
+2. Jaga kompatibilitas dengan halaman Help yang sudah punya sidebar statis agar tidak duplikasi.
+3. Tambahkan struktur menu global (Home, TOC, Help, API References, Namespace index) dan active state berbasis URL.
+4. Sesuaikan CSS agar layout sidebar berlaku lintas halaman (`docs-layout`) dengan fallback responsif.
+
+**Kriteria Selesai**
+- Sidebar tampil di seluruh halaman docs (home/help/api/toc).
+- Tidak terjadi sidebar ganda pada halaman Help yang sudah punya sidebar manual.
+- Active state navigasi tetap jelas dan layout mobile tetap usable.
+
+## Plan 52 — 24 Feb 2026, 10:39
+Tanggal plan: 24 Feb 2026, 10:39
+
+**Ringkasan**
+Memperbarui halaman `Help` agar memiliki sidebar navigasi seperti pola Microsoft Learn API docs.
+
+**Sumber**
+- Permintaan user — 24 Feb 2026
+
+**Lingkup**
+- doc/pages/assets/css/site.css
+- doc/pages/help/index.html
+- doc/pages/help/getting-started.html
+- doc/pages/help/concepts.html
+- doc/pages/help/faq.html
+- doc/pages/help/how-to/open-and-read.html
+- doc/pages/help/how-to/create-folder-and-message.html
+- doc/pages/help/how-to/import-eml.html
+
+**Rencana Prioritas**
+1. Tambahkan komponen layout sidebar di sisi kiri dan konten utama di sisi kanan untuk semua halaman `help`.
+2. Buat style global sidebar (`doc-shell`, `doc-sidebar`, `doc-content`) yang konsisten dengan tema existing.
+3. Tambahkan menu navigasi antar halaman Help + tautan `API References` dan `TOC`.
+4. Tandai halaman aktif (`is-active`) agar pengalaman navigasi lebih jelas.
+5. Pastikan layout tetap usable di mobile dengan fallback single-column.
+
+**Kriteria Selesai**
+- Semua halaman `help` memiliki sidebar navigasi yang konsisten.
+- Navigasi antar halaman Help/API/TOC dapat diakses dari sidebar.
+- Tampilan tetap responsif di desktop dan mobile.
+
+## Plan 51 — 24 Feb 2026, 10:34
+Tanggal plan: 24 Feb 2026, 10:34
+
+**Ringkasan**
+Memperbarui `AGENTS.md` agar agent wajib memakai PowerShell 7 (atau terbaru) dan meminta user install PowerShell 7 jika belum tersedia.
+
+**Sumber**
+- Permintaan user — 24 Feb 2026
+
+**Lingkup**
+- AGENTS.md
+
+**Rencana Prioritas**
+1. Tambahkan section aturan eksekusi PowerShell pada `AGENTS.md`.
+2. Definisikan kewajiban penggunaan `pwsh` (PowerShell 7+) untuk seluruh eksekusi script PowerShell.
+3. Tambahkan fallback rule: jika PowerShell 7 belum terpasang, agent wajib meminta user install dulu sebelum lanjut eksekusi script.
+
+**Kriteria Selesai**
+- `AGENTS.md` memiliki aturan eksplisit penggunaan PowerShell 7+.
+- `AGENTS.md` memiliki aturan blokir eksekusi script saat PowerShell 7 belum terinstall.
+
+## Plan 50 — 24 Feb 2026, 10:24
+Tanggal plan: 24 Feb 2026, 10:24
+
+**Ringkasan**
+Menyamakan format seluruh halaman object API ke pola dokumentasi Microsoft Docs dengan kategori member dan keterangan (`Constructors`, `Properties`, `Methods`, `Events`, serta `Fields` untuk enum).
+
+**Sumber**
+- Permintaan user — 24 Feb 2026
+
+**Lingkup**
+- doc/pages/api/Emcode.Pst.Application/*.html
+- doc/pages/api/Emcode.Pst.Application.Abstractions/*.html
+- doc/pages/api/Emcode.Pst.Domain/*.html
+- doc/pages/api/Emcode.Pst.Infrastructure/*.html
+
+**Rencana Prioritas**
+1. Inventaris semua halaman type API (kecuali `index.html` dan `namespaces.html`).
+2. Ambil ringkasan object dan ringkasan member dari XML documentation source C#.
+3. Ubah struktur per halaman menjadi tabel kategori member:
+   - `Constructors`, `Properties`, `Methods`, `Events`.
+   - `Fields` untuk tipe enum.
+4. Tambahkan section `Remarks` pada halaman non-enum untuk catatan perilaku dasar.
+5. Validasi cepat pada beberapa halaman lintas namespace agar struktur konsisten.
+
+**Kriteria Selesai**
+- Semua halaman object API memakai format kategori member berbasis tabel.
+- Setiap member memiliki keterangan yang jelas dari XML documentation.
+- Struktur konsisten antar namespace dan mudah dipindai.
+
+## Plan 49 — 24 Feb 2026, 10:22
+Tanggal plan: 24 Feb 2026, 10:22
+
+**Ringkasan**
+Memperbarui halaman API `PstAttachment` agar format referensi mirip dokumentasi Microsoft .NET (`Constructors`, `Properties`, `Methods`, `Events`) dengan keterangan tiap member.
+
+**Sumber**
+- Permintaan user — 24 Feb 2026
+
+**Lingkup**
+- doc/pages/api/Emcode.Pst.Domain/PstAttachment.html
+
+**Rencana Prioritas**
+1. Ubah struktur halaman dari bullet list menjadi tabel member per kategori agar pola navigasi mirip Microsoft Docs.
+2. Tambahkan kategori `Constructors` dan pertahankan kategori `Properties`, `Methods`, serta `Events`.
+3. Isi deskripsi tiap property/method dari XML documentation object `PstAttachment`.
+4. Tambahkan section `Remarks` untuk behavior penting saat sumber konten attachment tidak tersedia.
+
+**Kriteria Selesai**
+- Halaman `PstAttachment` menampilkan kategori member yang konsisten (`Constructors`, `Properties`, `Methods`, `Events`).
+- Setiap member memiliki keterangan yang jelas dalam Bahasa Indonesia.
+- Struktur halaman lebih mudah dibaca sebagai API reference.
+
 ## Plan 48 — 23 Feb 2026, 14:36
 Tanggal plan: 23 Feb 2026, 14:36
 

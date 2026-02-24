@@ -4,7 +4,9 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>PstRecipientType</title>
+
   <link rel="stylesheet" href="../../assets/css/site.css" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/themes/prism.min.css" />
 </head>
 <body>
   <main>
@@ -16,16 +18,26 @@ Assembly: <code>Emcode.Pst.Libs</code></p>
 <pre><code class="language-csharp">public enum PstRecipientType
 </code></pre>
 <h2 id="fields">Fields</h2>
-<ul>
-<li><code>To = 1</code></li>
-<li><code>Cc = 2</code></li>
-<li><code>Bcc = 3</code></li>
-</ul>
+<table>
+<thead><tr><th>Field</th><th>Value</th><th>Keterangan</th></tr></thead>
+<tbody>
+<tr><td><code>To</code></td><td><code>1</code></td><td>Penerima utama (To).</td></tr>
+<tr><td><code>Cc</code></td><td><code>2</code></td><td>Penerima tembusan (Cc).</td></tr>
+<tr><td><code>Bcc</code></td><td><code>3</code></td><td>Penerima blind carbon copy (Bcc).</td></tr>
+</tbody></table>
 
   </main>
+  <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/components/prism-core.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/components/prism-clike.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/components/prism-csharp.min.js"></script>
   <script src="../../assets/js/theme.js"></script>
 </body>
 </html>
+
+
+
+
+
 
 
 

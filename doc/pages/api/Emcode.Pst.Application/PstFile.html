@@ -4,7 +4,9 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>PstFile</title>
+
   <link rel="stylesheet" href="../../assets/css/site.css" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/themes/prism.min.css" />
 </head>
 <body>
   <main>
@@ -15,34 +17,49 @@ Assembly: <code>Emcode.Pst.Libs</code></p>
 <h2 id="definition">Definition</h2>
 <pre><code class="language-csharp">public sealed class PstFile : IDisposable
 </code></pre>
+<h2 id="constructors">Constructors</h2>
+<table>
+<thead><tr><th>Constructor</th><th>Keterangan</th></tr></thead>
+<tbody>
+<tr><td colspan="2">Tidak ada constructor publik.</td></tr>
+</tbody></table>
 <h2 id="properties">Properties</h2>
-<ul>
-<li><code>string Path</code> - Lokasi file PST yang dibuka.</li>
-<li><code>PstOpenOptions Options</code> - Opsi pembukaan PST yang digunakan.</li>
-<li><code>IReadOnlyList&lt;PstFolder&gt; Folders</code> - Daftar folder hasil pembacaan PST.</li>
-<li><code>PstFolder? RootFolder</code> - Folder root PST jika tersedia.</li>
-<li><code>PstHeaderInfo? Header</code> - Metadata header PST hasil pembacaan awal.</li>
-</ul>
+<table>
+<thead><tr><th>Property</th><th>Type</th><th>Keterangan</th></tr></thead>
+<tbody>
+<tr><td><code>Path</code></td><td><code>string</code></td><td>Lokasi file PST yang dibuka.</td></tr>
+<tr><td><code>Options</code></td><td><code>PstOpenOptions</code></td><td>Opsi pembukaan file PST yang digunakan.</td></tr>
+<tr><td><code>Folders</code></td><td><code>IReadOnlyList&lt;PstFolder&gt;</code></td><td>Daftar folder hasil pembacaan PST.</td></tr>
+<tr><td><code>RootFolder</code></td><td><code>PstFolder?</code></td><td>Folder root PST jika tersedia.</td></tr>
+<tr><td><code>Header</code></td><td><code>PstHeaderInfo?</code></td><td>Metadata header PST hasil pembacaan awal.</td></tr>
+</tbody></table>
 <h2 id="methods">Methods</h2>
-<ul>
-<li><code>static PstFile Open(string path, PstOpenOptions? options = null, IPstReader? reader = null, IPstWriter? writer = null)</code></li>
-<li><code>static Task&lt;PstFile&gt; OpenAsync(string path, PstOpenOptions? options = null, IPstReader? reader = null, IPstWriter? writer = null, CancellationToken cancellationToken = default)</code></li>
-<li><code>PstFolder CreateFolder(string name, PstFolder? parent = null)</code></li>
-<li><code>Task&lt;PstFolder&gt; CreateFolderAsync(string name, PstFolder? parent = null, CancellationToken cancellationToken = default)</code></li>
-<li><code>PstMessage CreateMessage(PstFolder folder, PstMessageDraft draft)</code></li>
-<li><code>Task&lt;PstMessage&gt; CreateMessageAsync(PstFolder folder, PstMessageDraft draft, CancellationToken cancellationToken = default)</code></li>
-<li><code>PstMessage ImportEml(PstFolder folder, string emlPath)</code></li>
-<li><code>Task&lt;PstMessage&gt; ImportEmlAsync(PstFolder folder, string emlPath, CancellationToken cancellationToken = default)</code></li>
-<li><code>void UpdateMessage(PstMessage message, PstMessageDraft draft)</code></li>
-<li><code>Task UpdateMessageAsync(PstMessage message, PstMessageDraft draft, CancellationToken cancellationToken = default)</code></li>
-<li><code>void DeleteMessage(PstMessage message)</code></li>
-<li><code>Task DeleteMessageAsync(PstMessage message, CancellationToken cancellationToken = default)</code></li>
-<li><code>void Dispose()</code></li>
-</ul>
+<table>
+<thead><tr><th>Method</th><th>Return Type</th><th>Keterangan</th></tr></thead>
+<tbody>
+<tr><td><code>static PstFile Open(string path, PstOpenOptions? options = null, IPstReader? reader = null, IPstWriter? writer = null)</code></td><td><code>static PstFile</code></td><td>Membuka file PST dengan reader dan writer opsional.</td></tr>
+<tr><td><code>static Task&lt;PstFile&gt; OpenAsync(string path, PstOpenOptions? options = null, IPstReader? reader = null, IPstWriter? writer = null, CancellationToken cancellationToken = default)</code></td><td><code>static Task&lt;PstFile&gt;</code></td><td>Membuka file PST secara asynchronous dengan reader dan writer opsional.</td></tr>
+<tr><td><code>PstFolder CreateFolder(string name, PstFolder? parent = null)</code></td><td><code>PstFolder</code></td><td>Membuat folder baru di PST dengan parent opsional.</td></tr>
+<tr><td><code>Task&lt;PstFolder&gt; CreateFolderAsync(string name, PstFolder? parent = null, CancellationToken cancellationToken = default)</code></td><td><code>Task&lt;PstFolder&gt;</code></td><td>Membuat folder baru di PST secara asynchronous dengan parent opsional.</td></tr>
+<tr><td><code>PstMessage CreateMessage(PstFolder folder, PstMessageDraft draft)</code></td><td><code>PstMessage</code></td><td>Membuat pesan baru di folder tertentu.</td></tr>
+<tr><td><code>Task&lt;PstMessage&gt; CreateMessageAsync(PstFolder folder, PstMessageDraft draft, CancellationToken cancellationToken = default)</code></td><td><code>Task&lt;PstMessage&gt;</code></td><td>Membuat pesan baru di folder tertentu secara asynchronous.</td></tr>
+<tr><td><code>PstMessage ImportEml(PstFolder folder, string emlPath)</code></td><td><code>PstMessage</code></td><td>Mengimpor file .eml ke folder tertentu sebagai pesan baru.</td></tr>
+<tr><td><code>Task&lt;PstMessage&gt; ImportEmlAsync(PstFolder folder, string emlPath, CancellationToken cancellationToken = default)</code></td><td><code>Task&lt;PstMessage&gt;</code></td><td>Mengimpor file .eml ke folder tertentu sebagai pesan baru secara asynchronous.</td></tr>
+<tr><td><code>void UpdateMessage(PstMessage message, PstMessageDraft draft)</code></td><td><code>void</code></td><td>Memperbarui pesan yang sudah ada dengan draft terbaru.</td></tr>
+<tr><td><code>Task UpdateMessageAsync(PstMessage message, PstMessageDraft draft, CancellationToken cancellationToken = default)</code></td><td><code>Task</code></td><td>Memperbarui pesan yang sudah ada secara asynchronous.</td></tr>
+<tr><td><code>void DeleteMessage(PstMessage message)</code></td><td><code>void</code></td><td>Menghapus pesan dari PST.</td></tr>
+<tr><td><code>Task DeleteMessageAsync(PstMessage message, CancellationToken cancellationToken = default)</code></td><td><code>Task</code></td><td>Menghapus pesan dari PST secara asynchronous.</td></tr>
+<tr><td><code>void Dispose()</code></td><td><code>void</code></td><td>Melepas resource yang digunakan oleh PST.</td></tr>
+</tbody></table>
 <h2 id="events">Events</h2>
-<ul>
-<li>Tidak ada event publik.</li>
-</ul>
+<table>
+<thead><tr><th>Event</th><th>Type</th><th>Keterangan</th></tr></thead>
+<tbody>
+<tr><td colspan="3">Tidak ada event publik.</td></tr>
+</tbody></table>
+<h2 id="remarks">Remarks</h2>
+<p>Referensi ini merangkum member publik dari object dan keterangan perilaku dasarnya berdasarkan XML documentation source code.</p>
+
 <h2 id="see-also">See Also</h2>
 <ul>
 <li><a href="./PstOpenOptions.html">PstOpenOptions</a></li>
@@ -51,9 +68,17 @@ Assembly: <code>Emcode.Pst.Libs</code></p>
 </ul>
 
   </main>
+  <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/components/prism-core.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/components/prism-clike.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/prismjs@1.29.0/components/prism-csharp.min.js"></script>
   <script src="../../assets/js/theme.js"></script>
 </body>
 </html>
+
+
+
+
+
 
 
 
