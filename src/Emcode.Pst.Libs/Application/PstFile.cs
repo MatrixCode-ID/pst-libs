@@ -1,4 +1,5 @@
 using System.Linq;
+using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using Emcode.Pst.Application.Abstractions;
@@ -67,6 +68,7 @@ public sealed class PstFile : IDisposable
         Guard.NotNullOrWhiteSpace(path, nameof(path));
         options ??= new PstOpenOptions();
         reader ??= new PstNdbReader();
+        EnsureFileAvailability(path, options, writer);
 
         var pst = new PstFile(path, options, writer);
         var result = reader.Read(path, options);
@@ -100,6 +102,7 @@ public sealed class PstFile : IDisposable
         Guard.NotNullOrWhiteSpace(path, nameof(path));
         options ??= new PstOpenOptions();
         reader ??= new PstNdbReader();
+        await EnsureFileAvailabilityAsync(path, options, writer, cancellationToken).ConfigureAwait(false);
 
         var pst = new PstFile(path, options, writer);
         var result = await reader.ReadAsync(path, options, cancellationToken).ConfigureAwait(false);
@@ -288,6 +291,69 @@ public sealed class PstFile : IDisposable
         }
 
         return _writer.DeleteMessageAsync(message, cancellationToken);
+    }
+
+    /// <summary>
+    /// Memastikan file PST tersedia sebelum proses baca dimulai.
+    /// </summary>
+    /// <param name="path">Path file PST target.</param>
+    /// <param name="options">Opsi pembukaan PST.</param>
+    /// <param name="writer">Writer opsional untuk bootstrap file.</param>
+    private static void EnsureFileAvailability(string path, PstOpenOptions options, IPstWriter? writer)
+    {
+        if (File.Exists(path))
+        {
+            return;
+        }
+
+        if (!options.CreateIfMissing)
+        {
+            throw new FileNotFoundException("File PST tidak ditemukan.", path);
+        }
+
+        if (options.ReadOnly)
+        {
+            throw new NotSupportedException("CreateIfMissing membutuhkan opsi ReadOnly = false.");
+        }
+
+        if (writer is not IPstFileBootstrapper bootstrapper)
+        {
+            throw new NotSupportedException("CreateIfMissing membutuhkan writer yang mendukung bootstrap file PST.");
+        }
+
+        bootstrapper.EnsureFileInitialized(path, options);
+    }
+
+    /// <summary>
+    /// Memastikan file PST tersedia sebelum proses baca dimulai secara asynchronous.
+    /// </summary>
+    /// <param name="path">Path file PST target.</param>
+    /// <param name="options">Opsi pembukaan PST.</param>
+    /// <param name="writer">Writer opsional untuk bootstrap file.</param>
+    /// <param name="cancellationToken">Token pembatalan operasi.</param>
+    private static async Task EnsureFileAvailabilityAsync(string path, PstOpenOptions options, IPstWriter? writer, CancellationToken cancellationToken)
+    {
+        if (File.Exists(path))
+        {
+            return;
+        }
+
+        if (!options.CreateIfMissing)
+        {
+            throw new FileNotFoundException("File PST tidak ditemukan.", path);
+        }
+
+        if (options.ReadOnly)
+        {
+            throw new NotSupportedException("CreateIfMissing membutuhkan opsi ReadOnly = false.");
+        }
+
+        if (writer is not IPstFileBootstrapper bootstrapper)
+        {
+            throw new NotSupportedException("CreateIfMissing membutuhkan writer yang mendukung bootstrap file PST.");
+        }
+
+        await bootstrapper.EnsureFileInitializedAsync(path, options, cancellationToken).ConfigureAwait(false);
     }
 
     /// <summary>

@@ -82,6 +82,25 @@ public sealed class LtpWriterTests
         Assert.NotEmpty(blocks);
     }
 
+    /// <summary>
+    /// Memastikan Property Context writer fallback ke subnode saat heap inline melebihi kapasitas block.
+    /// </summary>
+    [Fact]
+    public void PropertyContextWriter_BuildResult_ShouldFallbackToSubnodesWhenHeapOverflows()
+    {
+        var options = LtpWriterOptions.CreateDefault(PstFormat.Unicode);
+        var writer = new PropertyContextWriter(options);
+        var text = new string('X', 1500);
+        writer.SetString(0x1000, text);
+        writer.SetString(0x1013, text);
+        writer.SetString(0x007D, text);
+
+        var result = writer.BuildResult();
+
+        Assert.NotEmpty(result.Blocks);
+        Assert.True(result.Subnodes.Count > 0);
+    }
+
     private static PropertyContext CreatePropertyContext(IReadOnlyList<PstDataBlock> blocks, PstFormat format)
     {
         var heap = new HeapOnNode(blocks);

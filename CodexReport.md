@@ -1,3 +1,929 @@
+## Laporan 202 - 24 Feb 2026, 15:08
+Tanggal laporan: 24 Feb 2026, 15:08
+
+**Ringkasan Pertanyaan**
+Meminta menjalankan Plan 70.
+
+**Statement Jawaban**
+Plan 70 sudah dieksekusi.
+
+Perubahan yang diterapkan pada `AGENTS.md`:
+- Rule commit/versioning diubah menjadi berbasis branch.
+- Jika commit di branch `main`:
+  - tetap wajib tanya tipe versi (`major`/`minor`/`build`),
+  - tetap wajib version bump,
+  - tetap wajib update `ChangeLogs.md` sebelum commit.
+- Jika commit di branch selain `main`:
+  - tidak wajib version bump,
+  - tidak wajib update `ChangeLogs.md`,
+  - commit dapat langsung dilakukan sesuai instruksi user.
+- Ditambahkan aturan eksplisit bahwa saat merge/perubahan masuk ke `main`, version bump dan update `ChangeLogs.md` kembali wajib.
+
+**File Terkait**
+- AGENTS.md
+- CodexReport.md
+
+## Laporan 201 - 24 Feb 2026, 15:06
+Tanggal laporan: 24 Feb 2026, 15:06
+
+**Ringkasan Pertanyaan**
+Meminta update `AGENTS.md`: jika commit di branch selain `main`, tidak perlu buat changelog dan upgrade versi; pencatatan dilakukan saat merge ke `main`.
+
+**Statement Jawaban**
+Sesuai aturan refactor project, plan sudah disiapkan dulu di `RefactorPlan.md` sebagai **Plan 70**.
+
+Isi utama Plan 70:
+- ubah rule commit/versioning jadi berbasis branch,
+- branch `main` tetap wajib version bump + update `ChangeLogs.md`,
+- branch non-`main` tidak wajib update versi/changelog saat commit,
+- saat merge ke `main`, wajib lakukan version bump + update `ChangeLogs.md`.
+
+Status:
+- **Belum dieksekusi**, menunggu perintah Anda sesuai aturan refactor.
+
+**File Terkait**
+- RefactorPlan.md
+- CodexReport.md
+
+## Laporan 200 - 24 Feb 2026, 15:02
+Tanggal laporan: 24 Feb 2026, 15:02
+
+**Ringkasan Pertanyaan**
+Meminta membandingkan jumlah folder email pada `E:\tmp\test-temp\Reference.pst` dan `E:\tmp\test-temp\asriany@connusa.com.pst`, lalu mencari folder yang sama dan berbeda.
+
+**Statement Jawaban**
+Perbandingan berhasil dijalankan dengan utilitas .NET sementara berbasis library project.
+
+Hasil ringkas:
+- `Reference_TotalFolders=8`
+- `Generated_TotalFolders=5`
+- `Reference_UniqueFolderNames=8`
+- `Generated_UniqueFolderNames=5`
+- `SameFolderNames_Count=3`
+- `OnlyReference_Count=5`
+- `OnlyGenerated_Count=2`
+
+Folder yang sama:
+- `INBOX`
+- `Root`
+- `Sent Items`
+
+Hanya ada di `Reference.pst`:
+- `Deleted Items`
+- `Folder 00000122`
+- `IPM_COMMON_VIEWS`
+- `Search Root`
+- `Top of Outlook data file`
+
+Hanya ada di `asriany@connusa.com.pst`:
+- `asriany`
+- `Junk E-Mail`
+
+Catatan:
+- Perbandingan dilakukan case-insensitive pada nama folder unik.
+
+**File Terkait**
+- E:\tmp\test-temp\Reference.pst
+- E:\tmp\test-temp\asriany@connusa.com.pst
+- artifacts/PstCompareTmp/Program.cs
+- CodexReport.md
+
+## Laporan 199 - 24 Feb 2026, 14:56
+Tanggal laporan: 24 Feb 2026, 14:56
+
+**Ringkasan Pertanyaan**
+Meminta cek Laporan 198 dan membuat plan untuk memperbaiki penulisan struktur PST.
+
+**Statement Jawaban**
+Plan perbaikan sudah disiapkan dan ditambahkan di paling atas `RefactorPlan.md` sebagai **Plan 69**.
+
+Fokus Plan 69:
+- perbaikan compliance header/bootstrap terhadap baseline Outlook (`Reference.pst`),
+- normalisasi field mandatory (`wMagicClient`, `wVerClient`, platform, `rgbFM/rgbFP`, `bCryptMethod`),
+- finalisasi urutan bootstrap + CRC yang deterministik,
+- penambahan test byte-level compliance agar mismatch struktural tidak berulang.
+
+Status:
+- **Belum dieksekusi**, menunggu perintah Anda sesuai aturan refactor project.
+
+**File Terkait**
+- RefactorPlan.md
+- CodexReport.md
+
+## Laporan 198 - 24 Feb 2026, 14:53
+Tanggal laporan: 24 Feb 2026, 14:53
+
+**Ringkasan Pertanyaan**
+Meminta membandingkan struktur `E:\tmp\test-temp\Reference.pst` (dibuat Outlook) terhadap `E:\tmp\test-temp\asriany@connusa.com.pst`.
+
+**Statement Jawaban**
+Perbandingan header-level menunjukkan mismatch struktural yang konsisten dengan gejala file generated tidak dikenali Outlook.
+
+Perbandingan field kunci:
+- `dwMagic`:
+  - Reference: `0x4E444221`
+  - Generated: `0x4E444221` (sama)
+- `wMagicClient`:
+  - Reference: `0x4D53`
+  - Generated: `0x0000` (**beda kritis**)
+- `wVerClient`:
+  - Reference: `0x0013`
+  - Generated: `0x0000` (**beda kritis**)
+- `bPlatformCreate` / `bPlatformAccess`:
+  - Reference: `0x01` / `0x01`
+  - Generated: `0x00` / `0x00` (**beda kritis**)
+- `bCryptMethod`:
+  - Reference: `0x01`
+  - Generated: `0x00` (beda)
+- `rgbFM` area:
+  - Reference: byte `0xFF` terdeteksi (`44` byte dalam window yang dicek)
+  - Generated: `0` byte `0xFF` (**kosong semua**)
+- `fAMapValid`:
+  - Keduanya `0x02` (sama)
+
+Statistik diff header (`0x000`-`0x21F`):
+- Total offset berbeda: `346`.
+- Offset kritis yang berbeda termasuk `0x008-0x00F`, `0x100+` (area bitmap/reserved map), dan beberapa counter/root metadata.
+
+Kesimpulan:
+- Validasi pembanding dengan PST buatan Outlook menguatkan bahwa file generated gagal pada compliance struktur header/client-metadata, bukan sekadar masalah lock.
+
+**File Terkait**
+- E:\tmp\test-temp\Reference.pst
+- E:\tmp\test-temp\asriany@connusa.com.pst
+- src/Emcode.Pst.Libs/Infrastructure/Ndb/NdbHeaderWriter.cs
+- src/Emcode.Pst.Libs/Infrastructure/Ndb/PstBootstrapBuilder.cs
+- CodexReport.md
+
+## Laporan 197 - 24 Feb 2026, 14:44
+Tanggal laporan: 24 Feb 2026, 14:44
+
+**Ringkasan Pertanyaan**
+User menegaskan error Outlook bukan karena lock file, melainkan kemungkinan struktur PST tidak valid.
+
+**Statement Jawaban**
+Validasi byte-level pada file `E:\tmp\test-temp\asriany@connusa.com.pst` menunjukkan indikasi kuat masalah struktur header (bukan lock), khususnya field-field mandatory Unicode PST yang belum terinisialisasi sesuai contoh spesifikasi.
+
+Temuan utama:
+- `wMagicClient` terbaca `0x0000` (referensi contoh struktur: `0x4D53`).
+- `wVerClient` terbaca `0x0000`.
+- `bPlatformCreate` dan `bPlatformAccess` terbaca `0x00`.
+- `rgbFM` dan `rgbFP` tidak berisi baseline `0xFF` (count byte `0xFF` = `0` untuk keduanya).
+- Sementara field lain seperti `dwMagic`, `wVer`, `fAMapValid`, pointer root, dan CRC header terisi.
+
+Kesimpulan:
+- Error Outlook kemungkinan besar berasal dari ketidakpatuhan struktur header bootstrap/create terhadap field mandatory kompatibilitas Outlook.
+
+**File Terkait**
+- src/Emcode.Pst.Libs/Infrastructure/Ndb/NdbHeaderWriter.cs
+- src/Emcode.Pst.Libs/Infrastructure/Ndb/PstBootstrapBuilder.cs
+- doc/PST-241112.htm
+- CodexReport.md
+
+## Laporan 196 - 24 Feb 2026, 14:37
+Tanggal laporan: 24 Feb 2026, 14:37
+
+**Ringkasan Pertanyaan**
+Meminta menjalankan ulang test write data `.eml` dari folder `E:\tmp\test-temp\asriany` ke file `E:\tmp\test-temp\asriany@connusa.com.pst`.
+
+**Statement Jawaban**
+Pengujian berhasil dijalankan ulang dan **lulus**.
+
+Detail eksekusi:
+- Shell: `pwsh` versi `7.5.4`.
+- Environment test:
+  - `PST_IMPORT_ENABLED=1`
+  - `PST_IMPORT_SOURCE_DIR=E:\tmp\test-temp\asriany`
+  - `PST_IMPORT_TARGET_PATH=E:\tmp\test-temp\asriany@connusa.com.pst`
+- Command test:
+  - `dotnet test tests/Emcode.Pst.Tests/Emcode.Pst.Tests.csproj --filter "FullyQualifiedName~ImportEmlDirectoryTree_FromEnvironmentVariables_ShouldPreserveHierarchy" -v minimal`
+- Hasil:
+  - `Failed: 0, Passed: 1, Skipped: 0, Total: 1`.
+
+**File Terkait**
+- CodexReport.md
+
+## Laporan 195 - 24 Feb 2026, 14:36
+Tanggal laporan: 24 Feb 2026, 14:36
+
+**Ringkasan Pertanyaan**
+Meminta menjalankan Plan 68: ganti metode pembuatan PST baru agar tidak mengambil dari resource `blank.pst`, tetapi dibangun dari spesifikasi referensi.
+
+**Statement Jawaban**
+Plan 68 sudah dieksekusi.
+
+Perubahan implementasi:
+- Menambahkan builder baru `PstBootstrapBuilder` untuk bootstrap PST baseline langsung dari kode (tanpa template file):
+  - inisialisasi header (`NdbHeaderWriter.InitializeEmptyHeader`),
+  - set metadata `ROOT` awal (`ibFileEof`, `ibAMapLast`, `cbAMapFree`, `cbPMapFree`, `fAMapValid`),
+  - commit BBT/NBT baseline kosong via `NdbWriter.CommitBtrees(...)` agar root tree valid.
+- Mengubah `PstNdbWriter.EnsureFileInitialized(...)` dan `EnsureFileInitializedAsync(...)`:
+  - dari copy stream resource `blank.pst`,
+  - menjadi panggil `_bootstrapBuilder.Build(...)`.
+- Menghapus deklarasi embedded resource `blank.pst` dari `Emcode.Pst.Libs.csproj`.
+- Update test integrasi bootstrap:
+  - dari verifikasi copy resource menjadi verifikasi baseline spesifikasi (`format`, `fAMapValid`, root BBT/NBT non-zero).
+- Update test writer yang sebelumnya copy `blank.pst` agar memakai `EnsureFileInitialized(...)` langsung.
+
+Hasil verifikasi:
+- `dotnet test ... --filter "Open_WithCreateIfMissing_ShouldCreateNewPstAndPersistData|EnsureFileInitialized_ShouldBuildSpecificationBasedBaseline|CommitBtrees_ShouldUpdateAmapAndRootMetadata|CreateFolderAndMessage_ShouldIncrementRgnidCounters|CreateMessage_WithLargeVariableFields_ShouldPersistWithoutHeapOverflow"` -> **Passed (5/5)**.
+- `dotnet test ... --filter "ImportEmlDirectoryTree_FromEnvironmentVariables_ShouldPreserveHierarchy"` dengan env real path -> **Passed (1/1)**.
+- Re-check cepat:
+  - `dotnet test ... --filter "EnsureFileInitialized_ShouldBuildSpecificationBasedBaseline|Open_WithCreateIfMissing_ShouldCreateNewPstAndPersistData"` -> **Passed (2/2)**.
+
+**File Terkait**
+- src/Emcode.Pst.Libs/Infrastructure/Ndb/PstBootstrapBuilder.cs
+- src/Emcode.Pst.Libs/Infrastructure/Ndb/PstNdbWriter.cs
+- src/Emcode.Pst.Libs/Emcode.Pst.Libs.csproj
+- tests/Emcode.Pst.Tests/PstNdbWriterIntegrationTests.cs
+- tests/Emcode.Pst.Tests/NdbWriterTests.cs
+- CodexReport.md
+
+## Laporan 194 - 24 Feb 2026, 14:30
+Tanggal laporan: 24 Feb 2026, 14:30
+
+**Ringkasan Pertanyaan**
+Meminta mengganti metode pembuatan PST baru agar tidak mengambil dari resource `blank.pst`, tetapi dibuat berdasarkan spesifikasi referensi.
+
+**Statement Jawaban**
+Sesuai aturan refactor project, saya sudah menyiapkan plan terlebih dahulu dan menambahkannya di paling atas `RefactorPlan.md` sebagai **Plan 68**.
+
+Isi utama Plan 68:
+- migrasi `CreateIfMissing` dari resource `blank.pst` ke bootstrap builder PST programatik berbasis spesifikasi,
+- implementasi baseline header/ROOT/AMap/BBT/NBT minimum dari nol,
+- update test untuk memastikan flow baru tidak bergantung resource dan tetap interoperable.
+
+Status saat ini:
+- **Belum dieksekusi** (menunggu perintah Anda), sesuai aturan refactor yang mewajibkan menunggu instruksi user setelah plan dibuat.
+
+**File Terkait**
+- RefactorPlan.md
+- CodexReport.md
+
+## Laporan 193 - 24 Feb 2026, 14:23
+Tanggal laporan: 24 Feb 2026, 14:23
+
+**Ringkasan Pertanyaan**
+Meminta cek error Outlook Data File Corruption pada file `E:\tmp\test-temp\asriany@connusa.com.pst`.
+
+**Statement Jawaban**
+Investigasi teknis menunjukkan:
+- Error Outlook menampilkan `BCRead(0x4310000)` dengan expected trailer:
+  - `bid=0x828A`
+  - `cb=24`
+  - `dwCRC=6086EC42`
+  - `wSig=86BB`
+- Setelah file di-regenerate via test import yang sama, byte-level pada block tail `0x4311FF0` terbaca:
+  - `18 00 BB 86 42 EC 86 60 8A 82 00 00 00 00 00 00`
+  - Artinya nilai aktual sekarang cocok dengan expected (cb=24, wSig=86BB, crc=6086EC42, bid=0x828A).
+- Pada saat investigasi sempat terdeteksi file target hilang dari path (kemungkinan akibat flow recovery Outlook), lalu dibuat ulang lewat test.
+
+Kesimpulan sementara:
+- Korupsi yang terlihat di Outlook kemungkinan terjadi saat file berada pada state transisi/akses bersamaan (Outlook + Windows Search + proses write), bukan karena nilai trailer block tersebut saat ini.
+- `PstNdbWriter` membuka file dengan `FileShare.Read`, sehingga proses lain masih bisa membaca ketika commit belum final.
+
+Langkah aman operasional:
+1. Tutup Outlook dan hentikan indexing pada file PST target saat proses import berjalan.
+2. Jalankan import ke file PST yang tidak sedang di-attach Outlook.
+3. Attach ke Outlook hanya setelah proses import selesai.
+
+**File Terkait**
+- src/Emcode.Pst.Libs/Infrastructure/Ndb/PstNdbWriter.cs
+- src/Emcode.Pst.Libs/Infrastructure/Ndb/NdbBlockWriter.cs
+- src/Emcode.Pst.Libs/Infrastructure/Ndb/NdbWriter.cs
+- CodexReport.md
+
+## Laporan 192 - 24 Feb 2026, 14:19
+Tanggal laporan: 24 Feb 2026, 14:19
+
+**Ringkasan Pertanyaan**
+Meminta menjalankan ulang tes write data `.eml` dari `E:\tmp\test-temp\asriany` ke `E:\tmp\test-temp\asriany@connusa.com.pst`.
+
+**Statement Jawaban**
+Tes integrasi dijalankan ulang dengan environment variable:
+- `PST_IMPORT_ENABLED=1`
+- `PST_IMPORT_SOURCE_DIR=E:\tmp\test-temp\asriany`
+- `PST_IMPORT_TARGET_PATH=E:\tmp\test-temp\asriany@connusa.com.pst`
+
+Perintah:
+- `dotnet test tests/Emcode.Pst.Tests/Emcode.Pst.Tests.csproj --filter "FullyQualifiedName~ImportEmlDirectoryTree_FromEnvironmentVariables_ShouldPreserveHierarchy"`
+
+Hasil:
+- **Passed** (`Failed: 0, Passed: 1, Skipped: 0, Total: 1`).
+- Verifikasi file target:
+  - `E:\tmp\test-temp\asriany@connusa.com.pst`
+  - `Length: 70559232`
+  - `LastWriteTime: 24-Feb-26 14:18:50`
+
+**File Terkait**
+- CodexReport.md
+
+## Laporan 191 - 24 Feb 2026, 14:18
+Tanggal laporan: 24 Feb 2026, 14:18
+
+**Ringkasan Pertanyaan**
+Meminta cek apakah method pembuatan file PST menggunakan resource.
+
+**Statement Jawaban**
+Ya, method pembuatan file PST **menggunakan embedded resource**.
+
+Temuan kode:
+- `PstFile.EnsureFileAvailability(...)` memanggil `bootstrapper.EnsureFileInitialized(...)` saat file belum ada dan `CreateIfMissing=true`.
+- `PstNdbWriter.EnsureFileInitialized(...)` membuka stream dari `OpenBlankPstResourceStream()` lalu menyalin ke file target (`FileMode.CreateNew`).
+- `OpenBlankPstResourceStream()` mengambil resource assembly via `GetManifestResourceStream("Emcode.Pst.Libs.blank.pst")` dengan fallback suffix `.blank.pst`.
+- Deklarasi resource ada di project file: `<EmbeddedResource Include="blank.pst" LogicalName="Emcode.Pst.Libs.blank.pst" />`.
+
+Kesimpulan:
+- Flow create-if-missing saat ini adalah **bootstrap dari template resource `blank.pst`**, bukan generate struktur PST dari nol.
+
+**File Terkait**
+- src/Emcode.Pst.Libs/Application/PstFile.cs
+- src/Emcode.Pst.Libs/Infrastructure/Ndb/PstNdbWriter.cs
+- src/Emcode.Pst.Libs/Emcode.Pst.Libs.csproj
+- CodexReport.md
+
+## Laporan 190 - 24 Feb 2026, 14:16
+Tanggal laporan: 24 Feb 2026, 14:16
+
+**Ringkasan Pertanyaan**
+Menanyakan apakah proses test terakhir memakai `blank.pst` atau membuat file baru.
+
+**Statement Jawaban**
+Untuk run terakhir, file target `E:\tmp\test-temp\asriany@connusa.com.pst` sudah ada, jadi **tidak** bootstrap dari `blank.pst` dan **tidak** create file baru.
+
+Detail flow:
+- Pada test `ImportEmlDirectoryTree_FromEnvironmentVariables_ShouldPreserveHierarchy`, method `EnsureTargetPstExists(...)` langsung return jika file sudah ada.
+- Jika file target belum ada, opsi `CreateIfMissing = true` akan memanggil `EnsureFileInitialized(...)` di `PstNdbWriter`.
+- Implementasi `EnsureFileInitialized(...)` menyalin resource embedded `Emcode.Pst.Libs.blank.pst` ke path target.
+
+**File Terkait**
+- src/Emcode.Pst.Libs/Application/PstFile.cs
+- src/Emcode.Pst.Libs/Infrastructure/Ndb/PstNdbWriter.cs
+- tests/Emcode.Pst.Tests/PstNdbWriterIntegrationTests.cs
+- CodexReport.md
+
+## Laporan 189 - 24 Feb 2026, 14:13
+Tanggal laporan: 24 Feb 2026, 14:13
+
+**Ringkasan Pertanyaan**
+Meminta menjalankan ulang tes write data `.eml` dari `E:\tmp\test-temp\asriany` ke `E:\tmp\test-temp\asriany@connusa.com.pst`.
+
+**Statement Jawaban**
+Tes integrasi yang relevan berhasil dijalankan ulang dengan environment variable:
+- `PST_IMPORT_ENABLED=1`
+- `PST_IMPORT_SOURCE_DIR=E:\tmp\test-temp\asriany`
+- `PST_IMPORT_TARGET_PATH=E:\tmp\test-temp\asriany@connusa.com.pst`
+
+Perintah yang dijalankan:
+- `dotnet test tests/Emcode.Pst.Tests/Emcode.Pst.Tests.csproj --filter "FullyQualifiedName~ImportEmlDirectoryTree_FromEnvironmentVariables_ShouldPreserveHierarchy"`
+
+Hasil:
+- **Passed** (`Failed: 0, Passed: 1, Skipped: 0, Total: 1`).
+- File target PST terkonfirmasi ada dan terupdate:
+  - `E:\tmp\test-temp\asriany@connusa.com.pst`
+  - `Length: 70559232`
+  - `LastWriteTime: 24-Feb-26 14:13:32`
+
+**File Terkait**
+- CodexReport.md
+
+## Laporan 188 - 24 Feb 2026, 14:09
+Tanggal laporan: 24 Feb 2026, 14:09
+
+**Ringkasan Pertanyaan**
+Meminta menjalankan **Plan 67**.
+
+**Statement Jawaban**
+Plan 67 dieksekusi dengan fokus compliance allocation metadata + transactional safety pada writer NDB.
+
+Implementasi utama:
+- Menambahkan metadata header baru pada `NdbHeader` untuk snapshot `ROOT` (`ibFileEof`, `ibAMapLast`, `cbAMapFree`, `cbPMapFree`, `fAMapValid`) dan counter (`bidNextB`, `bidNextP`, `rgnid[]`).
+- Refactor `NdbHeaderReader` agar membaca area header sampai offset counter tinggi (`0x220`) dan mem-parse field `ROOT/counter` yang dibutuhkan.
+- Refactor `NdbHeaderWriter`:
+  - update offset `ROOT.ibFileEof` yang benar,
+  - tambah API update metadata `ROOT` alokasi,
+  - tambah API persist `rgnid[]`,
+  - tambah API `SetAMapValid(...)` untuk lifecycle transactional.
+- Menambahkan `NdbAllocationMapWriter` baru untuk:
+  - update bit AMap (`ptypeAMap = 0x84`) berdasarkan range alokasi block/page,
+  - inisialisasi AMap page baru saat growth,
+  - hitung ulang `cbAMapFree` dan `ibAMapLast`.
+- Refactor `NdbWriterCore` agar alokasi aware terhadap layout section AMap dan menyimpan snapshot `NdbAllocationRange` untuk commit.
+- Refactor `NdbWriter` commit sequence menjadi:
+  - set `fAMapValid` invalid saat transaksi alokasi dimulai,
+  - write data/page + update BBT/NBT,
+  - update AMap/ROOT/rgnid/bid counters,
+  - set `fAMapValid` valid,
+  - finalize CRC header.
+- Refactor `PstNdbWriter`:
+  - guard fail-fast bila `fAMapValid` header invalid,
+  - inisialisasi BID counter dari `bidNextB/bidNextP` header,
+  - persist snapshot counter NID allocator ke `rgnid[]` saat commit.
+- Menambahkan `NdbPageType.Amap` pada utilitas integritas.
+
+Penambahan/perubahan test fase 2:
+- `NdbWriterTests.CommitBtrees_ShouldUpdateAmapAndRootMetadata` (validasi bit AMap + transisi `fAMapValid` + metadata ROOT).
+- `PstNdbWriterIntegrationTests.Open_WhenAmapInvalid_ShouldFailFast`.
+- `PstNdbWriterIntegrationTests.CreateFolderAndMessage_ShouldIncrementRgnidCounters`.
+- Penyesuaian offset assert `ibFileEof` di `NdbHeaderWriterTests`.
+
+Verifikasi:
+- `dotnet test tests/Emcode.Pst.Tests/Emcode.Pst.Tests.csproj --filter 'NdbWriterCoreTests|NdbWriterTests|NdbHeaderWriterTests|Open_WhenAmapInvalid_ShouldFailFast|Open_WithCreateIfMissing_ShouldCreateNewPstAndPersistData|CreateMessage_WithLargeVariableFields_ShouldPersistWithoutHeapOverflow|CreateFolderAndMessage_ShouldIncrementRgnidCounters'` -> **Passed (12/12)**.
+- `dotnet test tests/Emcode.Pst.Tests/Emcode.Pst.Tests.csproj` masih gagal pada test yang membutuhkan `doc/Samples/sample1.pst` (`Sample PST tidak ditemukan`), bukan pada assertion flow Plan 67 yang baru.
+
+**File Terkait**
+- src/Emcode.Pst.Libs/Infrastructure/Ndb/NdbHeader.cs
+- src/Emcode.Pst.Libs/Infrastructure/Ndb/NdbHeaderReader.cs
+- src/Emcode.Pst.Libs/Infrastructure/Ndb/NdbHeaderWriter.cs
+- src/Emcode.Pst.Libs/Infrastructure/Ndb/NdbAllocationMapWriter.cs
+- src/Emcode.Pst.Libs/Infrastructure/Ndb/NdbWriterCore.cs
+- src/Emcode.Pst.Libs/Infrastructure/Ndb/NdbWriter.cs
+- src/Emcode.Pst.Libs/Infrastructure/Ndb/PstNdbWriter.cs
+- src/Emcode.Pst.Libs/Infrastructure/Ndb/NdbIntegrity.cs
+- tests/Emcode.Pst.Tests/NdbWriterTests.cs
+- tests/Emcode.Pst.Tests/NdbHeaderWriterTests.cs
+- tests/Emcode.Pst.Tests/PstNdbWriterIntegrationTests.cs
+- CodexReport.md
+
+## Laporan 187 - 24 Feb 2026, 13:51
+Tanggal laporan: 24 Feb 2026, 13:51
+
+**Ringkasan Pertanyaan**
+Meminta menyiapkan plan untuk fase selanjutnya setelah eksekusi Plan 66.
+
+**Statement Jawaban**
+Plan lanjutan sudah disiapkan dan ditambahkan di paling atas `RefactorPlan.md` sebagai **Plan 67**.
+
+Fokus Plan 67:
+- implementasi `AMap` writer/update metadata alokasi,
+- lifecycle transactional `fAMapValid` (invalid saat mutasi, valid saat final commit),
+- sinkronisasi counter header (`rgnid`, `bidNextB`, `bidNextP`, `ibFileEof`, `ibAMapLast`, `cbAMapFree`, `cbPMapFree`),
+- serta penambahan test compliance fase 2.
+
+Sesuai aturan project, plan sudah disiapkan dan eksekusi menunggu perintah user.
+
+**File Terkait**
+- RefactorPlan.md
+- CodexReport.md
+## Laporan 186 - 24 Feb 2026, 13:32
+Tanggal laporan: 24 Feb 2026, 13:32
+
+**Ringkasan Pertanyaan**
+Meminta menjalankan Plan 66 untuk update library agar lebih compliance terhadap `doc/PST-241112.htm`.
+
+**Statement Jawaban**
+Plan 66 dieksekusi pada area prioritas teknis compliance writer NDB, dengan implementasi berikut:
+
+1. Menambahkan utilitas integritas NDB:
+- `NdbIntegrity.ComputeCrc(...)` untuk CRC.
+- `NdbIntegrity.ComputeSignature(...)` sesuai rumus section 5.5 (`ib XOR bid`, lalu XOR high/low 16-bit).
+- Serializer `WritePageTrailer(...)` dan `WriteBlockTrailer(...)` untuk layout Unicode/ANSI.
+
+2. Refactor allocator core:
+- `NdbWriterCore` kini memiliki pemisahan counter `bidNextB` dan `bidNextP`.
+- Ditambahkan `AllocatePage()` (512-byte page allocation).
+- Ditambahkan properti compliance: `BlockTrailerSize`, `MaxBlockDataSize`, `NextBlockBidRaw`, `NextPageBidRaw`.
+
+3. Refactor penulisan block/page:
+- `NdbBlockWriter` kini menulis `BLOCKTRAILER` (cb, wSig, dwCRC, bid) pada akhir block.
+- Ditambahkan `WritePage(...)` untuk menulis page + inisialisasi `PAGETRAILER`.
+
+4. Refactor penulisan BTree:
+- `NdbBtreeWriter` menulis halaman BBT/NBT via `WritePage(...)` (bukan external block generik).
+- `ptype` halaman diisi (`ptypeBBT` / `ptypeNBT`).
+- Level intermediate (`cLevel`) dibuat dinamis per depth.
+
+5. Refactor commit metadata header:
+- `NdbWriter.CommitBtrees(...)` kini update:
+  - root pointers,
+  - `bidNextB` / `bidNextP`,
+  - `ROOT.ibFileEof`,
+  - `dwCRCPartial` / `dwCRCFull`.
+- Ditambahkan API di `NdbHeaderWriter`:
+  - `UpdateBidCounters(...)`
+  - `UpdateFileSizeOnDisk(...)`
+  - `UpdateHeaderCrcs(...)`
+
+6. Penyesuaian data tree capacity:
+- `NdbWriter.WriteDataTree(...)` dan pemecahan XBLOCK kini memakai `MaxBlockDataSize` agar payload block tidak melampaui ruang trailer.
+
+7. Penambahan test:
+- `NdbHeaderWriterTests.UpdateBidCountersAndCrc_ShouldWriteExpectedValues`.
+- `NdbWriterTests.NdbBlockWriter_WritePage_ShouldWritePageTrailer`.
+- `NdbWriterTests.NdbBlockWriter_ShouldWriteBlock` diperluas untuk validasi BLOCKTRAILER.
+
+Hasil verifikasi:
+- `dotnet test --filter 'NdbWriterCoreTests|NdbWriterTests|NdbHeaderWriterTests'` => **Passed (7/7)**.
+- `dotnet test --filter 'Open_WithCreateIfMissing_ShouldCreateNewPstAndPersistData|EnsureFileInitialized_ShouldCopyFromEmbeddedBlankPst'` => **Passed (2/2)**.
+- `dotnet test` full suite gagal pada test yang membutuhkan sample PST eksternal (`Sample PST tidak ditemukan`), bukan karena assertion regresi fitur baru.
+
+Catatan:
+- Eksekusi ini meningkatkan compliance pada jalur trailer/CRC/counter header dan page write.
+- Remediasi penuh semua butir Plan 66 (terutama maintenance AMap/PMap/FMap/FPMap/DList dan lifecycle fAMapValid transactional) masih perlu lanjutan iterasi berikutnya.
+
+**File Terkait**
+- src/Emcode.Pst.Libs/Infrastructure/Ndb/NdbIntegrity.cs
+- src/Emcode.Pst.Libs/Infrastructure/Ndb/NdbWriterCore.cs
+- src/Emcode.Pst.Libs/Infrastructure/Ndb/NdbBlockWriter.cs
+- src/Emcode.Pst.Libs/Infrastructure/Ndb/NdbBtreeWriter.cs
+- src/Emcode.Pst.Libs/Infrastructure/Ndb/NdbHeaderWriter.cs
+- src/Emcode.Pst.Libs/Infrastructure/Ndb/NdbWriter.cs
+- tests/Emcode.Pst.Tests/NdbWriterTests.cs
+- tests/Emcode.Pst.Tests/NdbHeaderWriterTests.cs
+- CodexReport.md
+## Laporan 185 - 24 Feb 2026, 13:32
+Tanggal laporan: 24 Feb 2026, 13:32
+
+**Ringkasan Pertanyaan**
+Meminta dibuatkan plan untuk update library agar compliance dengan referensi `doc/PST-241112.htm`.
+
+**Statement Jawaban**
+Plan refactor baru sudah disiapkan dan ditambahkan di paling atas `RefactorPlan.md` sebagai **Plan 66**. Isi plan mencakup roadmap compliance menyeluruh untuk `PAGETRAILER`, `BLOCKTRAILER`, `HEADER/ROOT`, alokasi `AMap`, sinkronisasi counter (`bidNextB`, `bidNextP`, `rgnid`), penguatan pipeline commit, serta test compliance dan verifikasi interoperability Outlook.
+
+Sesuai aturan project, eksekusi perubahan kode menunggu perintah user untuk menjalankan plan tersebut.
+
+**File Terkait**
+- RefactorPlan.md
+- CodexReport.md
+## Laporan 184 - 24 Feb 2026, 15:05
+Tanggal laporan: 24 Feb 2026, 15:05
+
+**Ringkasan Pertanyaan**
+Melaporkan bahwa hasil PST masih error saat dibuka di Microsoft Outlook.
+
+**Statement Jawaban**
+Dijelaskan bahwa writer saat ini masih kompatibel parser internal, namun belum compliance penuh untuk validasi Outlook (struktur NDB dan metadata terkait alokasi/check/trailer). Karena itu file bisa lulus test internal tetapi tetap ditolak Outlook. Diberikan arah solusi: gunakan writer yang Outlook-compliant (MAPI/Interop/third-party) atau lanjutkan pekerjaan compliance low-level PST secara penuh.
+
+**File Terkait**
+- CodexReport.md
+- src/Emcode.Pst.Libs/Infrastructure/Ndb/PstNdbWriter.cs
+- src/Emcode.Pst.Libs/Infrastructure/Ndb/NdbBtreeWriter.cs
+- src/Emcode.Pst.Libs/Infrastructure/Ndb/NdbHeaderWriter.cs
+## Laporan 183 - 24 Feb 2026, 15:00
+Tanggal laporan: 24 Feb 2026, 15:00
+
+**Ringkasan Pertanyaan**
+Meminta menjalankan test kembali setelah perubahan Plan 65.
+
+**Statement Jawaban**
+Test dijalankan ulang pada skenario utama flow terbaru (embedded lank.pst, create-if-missing, dan import .eml).
+
+Perintah:
+- dotnet test tests/Emcode.Pst.Tests/Emcode.Pst.Tests.csproj --filter "FullyQualifiedName~EnsureFileInitialized_ShouldCopyFromEmbeddedBlankPst|FullyQualifiedName~Open_WithCreateIfMissing_ShouldCreateNewPstAndPersistData|FullyQualifiedName~ImportEmlDirectoryTree_FromEnvironmentVariables_ShouldPreserveHierarchy"
+
+Hasil:
+- Passed: 3
+- Failed: 0
+- Skipped: 0
+
+**File Terkait**
+- CodexReport.md
+- tests/Emcode.Pst.Tests/PstNdbWriterIntegrationTests.cs
+## Laporan 182 - 24 Feb 2026, 14:53
+Tanggal laporan: 24 Feb 2026, 14:53
+
+**Ringkasan Pertanyaan**
+Meminta menjalankan Plan 65.
+
+**Statement Jawaban**
+Plan 65 selesai dieksekusi end-to-end.
+
+Implementasi final:
+- lank.pst di-embed ke assembly (EmbeddedResource) pada .csproj.
+- Flow PstNdbWriter.EnsureFileInitialized (sync/async) membuat file PST baru dengan menyalin binary dari embedded resource lank.pst.
+- Ditambahkan helper OpenBlankPstResourceStream untuk membaca resource secara deterministik.
+- Test import env-var dirapikan agar saat target belum ada, test membuat PST melalui CreateIfMissing (tidak lagi tergantung env template eksternal).
+- Ditambahkan test verifikasi resource bootstrap: EnsureFileInitialized_ShouldCopyFromEmbeddedBlankPst.
+
+Verifikasi:
+- dotnet test --filter "FullyQualifiedName~EnsureFileInitialized_ShouldCopyFromEmbeddedBlankPst|FullyQualifiedName~Open_WithCreateIfMissing_ShouldCreateNewPstAndPersistData|FullyQualifiedName~ImportEmlDirectoryTree_FromEnvironmentVariables_ShouldPreserveHierarchy" -> Passed (3/3).
+
+**File Terkait**
+- src/Emcode.Pst.Libs/Emcode.Pst.Libs.csproj
+- src/Emcode.Pst.Libs/blank.pst
+- src/Emcode.Pst.Libs/Infrastructure/Ndb/PstNdbWriter.cs
+- tests/Emcode.Pst.Tests/PstNdbWriterIntegrationTests.cs
+- CodexReport.md
+## Laporan 181 - 24 Feb 2026, 14:47
+Tanggal laporan: 24 Feb 2026, 14:47
+
+**Ringkasan Pertanyaan**
+Meminta menjalankan Plan 65: embed lank.pst ke project sebagai binary resource, lalu flow create PST harus menyalin dari resource tersebut.
+
+**Statement Jawaban**
+Plan 65 dieksekusi.
+
+Perubahan utama:
+- lank.pst didaftarkan sebagai embedded resource pada .csproj.
+- PstNdbWriter.EnsureFileInitialized diubah untuk membuat file baru dengan menyalin stream resource lank.pst dari assembly (sinkron + async).
+- Ditambahkan test integration EnsureFileInitialized_ShouldCopyFromEmbeddedBlankPst untuk memverifikasi file hasil bootstrap identik dengan resource (ukuran + 512 byte awal).
+
+Verifikasi:
+- dotnet test --filter "FullyQualifiedName~EnsureFileInitialized_ShouldCopyFromEmbeddedBlankPst|FullyQualifiedName~Open_WithCreateIfMissing_ShouldCreateNewPstAndPersistData" -> Passed (2/2).
+
+**File Terkait**
+- src/Emcode.Pst.Libs/Emcode.Pst.Libs.csproj
+- src/Emcode.Pst.Libs/blank.pst
+- src/Emcode.Pst.Libs/Infrastructure/Ndb/PstNdbWriter.cs
+- tests/Emcode.Pst.Tests/PstNdbWriterIntegrationTests.cs
+- CodexReport.md
+## Laporan 180 - 24 Feb 2026, 14:42
+Tanggal laporan: 24 Feb 2026, 14:42
+
+**Ringkasan Pertanyaan**
+Meminta update src/Emcode.Pst.Libs/Emcode.Pst.Libs.csproj untuk memasukkan src/Emcode.Pst.Libs/blank.pst sebagai binary resource, lalu flow create PST harus mengambil file dari resource tersebut sebelum write.
+
+**Statement Jawaban**
+Sesuai aturan project, disiapkan plan refactor baru (Plan 65) dan menunggu konfirmasi user sebelum eksekusi perubahan kode.
+
+**File Terkait**
+- RefactorPlan.md
+- CodexReport.md
+## Laporan 179 - 24 Feb 2026, 14:36
+Tanggal laporan: 24 Feb 2026, 14:36
+
+**Ringkasan Pertanyaan**
+Melaporkan file PST hasil proses tidak bisa dibuka di Microsoft Outlook.
+
+**Statement Jawaban**
+Dijelaskan bahwa implementasi writer saat ini masih parsial dan berorientasi kompatibilitas internal library, sehingga kemungkinan belum memenuhi seluruh requirement format MS-PST yang divalidasi Outlook. Diberikan arahan workaround praktis (gunakan PST template dari Outlook) dan jalur perbaikan jangka panjang untuk compliance penuh.
+
+**File Terkait**
+- CodexReport.md
+- src/Emcode.Pst.Libs/Infrastructure/Ndb/PstNdbWriter.cs
+- src/Emcode.Pst.Libs/Infrastructure/Ndb/NdbBlockWriter.cs
+- src/Emcode.Pst.Libs/Infrastructure/Ndb/NdbBtreeWriter.cs
+- src/Emcode.Pst.Libs/Infrastructure/Ndb/NdbHeaderWriter.cs
+## Laporan 178 - 24 Feb 2026, 14:30
+Tanggal laporan: 24 Feb 2026, 14:30
+
+**Ringkasan Pertanyaan**
+Meminta membaca subject dari E:\tmp\test-temp\asriany@connusa.com.pst dan menampilkan di console.
+
+**Statement Jawaban**
+Perintah dijalankan melalui runner lokal dan berhasil mencetak seluruh subject email dari PST ke console.
+
+Hasil utama:
+- Total subject terbaca: 72 (TOTAL_SUBJECT: 72).
+- Subject mencakup berbagai email (termasuk 1 item (no subject)).
+
+**File Terkait**
+- CodexReport.md
+## Laporan 177 - 24 Feb 2026, 14:27
+Tanggal laporan: 24 Feb 2026, 14:27
+
+**Ringkasan Pertanyaan**
+Meminta mengulang test import setelah file target PST dihapus.
+
+**Statement Jawaban**
+Test import diulang dengan skenario target file tidak ada.
+
+Langkah eksekusi:
+- Membuat template PST valid: E:\tmp\test-temp\template-bootstrap.pst (bootstrap via CreateIfMissing).
+- Menjalankan test ImportEmlDirectoryTree_FromEnvironmentVariables_ShouldPreserveHierarchy dengan env:
+  - PST_IMPORT_ENABLED=true
+  - PST_IMPORT_SOURCE_DIR=E:\tmp\test-temp\asriany
+  - PST_IMPORT_TARGET_PATH=E:\tmp\test-temp\asriany@connusa.com.pst
+  - PST_IMPORT_TEMPLATE_PST=E:\tmp\test-temp\template-bootstrap.pst
+
+Hasil:
+- Test **Passed**.
+- File target E:\tmp\test-temp\asriany@connusa.com.pst terbentuk kembali.
+- Ukuran file target setelah import: 66,846,720 byte.
+
+**File Terkait**
+- CodexReport.md
+- tests/Emcode.Pst.Tests/PstNdbWriterIntegrationTests.cs
+## Laporan 176 - 24 Feb 2026, 14:18
+Tanggal laporan: 24 Feb 2026, 14:18
+
+**Ringkasan Pertanyaan**
+User menyetujui implementasi fix heap overflow dan meminta eksekusi.
+
+**Statement Jawaban**
+Fix diimplementasikan dengan fallback build pada writer LTP:
+- PropertyContextWriter dan TableRowWriter sekarang mencoba build normal, lalu fallback rebuild dengan force spill variable-length value ke subnode saat terjadi error kapasitas heap (Ukuran heap melebihi kapasitas block / HNPAGEMAP melebihi kapasitas block).
+- State subnode di-reset pada setiap percobaan build agar tidak duplikat.
+
+Ditambahkan test regresi:
+- PropertyContextWriter_BuildResult_ShouldFallbackToSubnodesWhenHeapOverflows.
+- CreateMessage_WithLargeVariableFields_ShouldPersistWithoutHeapOverflow.
+
+Verifikasi:
+- Kedua test regresi lulus.
+- Test import real path E:\tmp\test-temp\asriany ke E:\tmp\test-temp\asriany@connusa.com.pst lulus setelah fix.
+- File target PST ada, ukuran terakhir 84,475,904 byte.
+
+**File Terkait**
+- src/Emcode.Pst.Libs/Domain/Ltp/PropertyContextWriter.cs
+- src/Emcode.Pst.Libs/Domain/Ltp/TableRowWriter.cs
+- tests/Emcode.Pst.Tests/LtpWriterTests.cs
+- tests/Emcode.Pst.Tests/PstNdbWriterIntegrationTests.cs
+- CodexReport.md
+## Laporan 175 - 24 Feb 2026, 14:22
+Tanggal laporan: 24 Feb 2026, 14:22
+
+**Ringkasan Pertanyaan**
+User menyetujui implementasi fix untuk error Ukuran heap melebihi kapasitas block.
+
+**Statement Jawaban**
+Disiapkan Plan 64 untuk implementasi perbaikan overflow heap dengan fallback spill nilai variable-length ke subnode dan penambahan verifikasi regresi.
+
+**File Terkait**
+- RefactorPlan.md
+- CodexReport.md
+## Laporan 174 - 24 Feb 2026, 14:15
+Tanggal laporan: 24 Feb 2026, 14:15
+
+**Ringkasan Pertanyaan**
+Menanyakan cara fix error Ukuran heap melebihi kapasitas block untuk skenario email real-world yang besar.
+
+**Statement Jawaban**
+Diberikan strategi fix teknis: ubah writer agar variabel length property (body/html/headers/binary) spill ke subnode secara agresif atau fallback otomatis saat heap overflow, karena reader PropertyContext sudah mendukung baca nilai dari subnode (HNID berbasis NID). Disarankan juga menambah test regresi untuk import .eml besar agar kasus serupa tidak terulang.
+
+**File Terkait**
+- src/Emcode.Pst.Libs/Domain/Ltp/LtpWriter.cs
+- src/Emcode.Pst.Libs/Domain/Ltp/PropertyContextWriter.cs
+- src/Emcode.Pst.Libs/Domain/Ltp/PropertyContext.cs
+- src/Emcode.Pst.Libs/Infrastructure/Ndb/PstNdbWriter.cs
+- CodexReport.md
+## Laporan 173 - 24 Feb 2026, 14:10
+Tanggal laporan: 24 Feb 2026, 14:10
+
+**Ringkasan Pertanyaan**
+Menanyakan penyebab error Ukuran heap melebihi kapasitas block dan relevansinya untuk email real-world yang berukuran besar.
+
+**Statement Jawaban**
+Dijelaskan bahwa error berasal dari batasan implementasi LtpWriter.HeapWriter yang saat ini hanya mendukung heap single-block, sehingga total data property context yang ditulis inline bisa melebihi kapasitas 1 block (Unicode: 8192 byte). Ini bukan batasan format PST secara umum, melainkan batasan writer saat ini. Pada alur import .eml, properti besar seperti body/html/header message dapat memicu kondisi tersebut.
+
+**File Terkait**
+- src/Emcode.Pst.Libs/Domain/Ltp/LtpWriter.cs
+- src/Emcode.Pst.Libs/Domain/Ltp/PropertyContextWriter.cs
+- src/Emcode.Pst.Libs/Domain/Ltp/LtpWriterOptions.cs
+- src/Emcode.Pst.Libs/Infrastructure/Ndb/PstNdbWriter.cs
+- src/Emcode.Pst.Libs/Infrastructure/PstEmlParser.cs
+- CodexReport.md
+## Laporan 172 - 24 Feb 2026, 14:03
+Tanggal laporan: 24 Feb 2026, 14:03
+
+**Ringkasan Pertanyaan**
+Meminta menjalankan test iterasi E:\tmp\test-temp\asriany dan membuat file target E:\tmp\test-temp\asriany@connusa.com.pst.
+
+**Statement Jawaban**
+Eksekusi dilakukan end-to-end:
+- Source folder terdeteksi valid dengan 72 file .eml.
+- File target PST berhasil dibuat dari nol menggunakan flow CreateIfMissing (file terbuat, ukuran 40960 byte).
+- Test import rekursif dijalankan, tetapi gagal saat memproses file:
+  - E:\tmp\test-temp\asriany\INBOX\01KJ7164AGK42ZVE9G2HAWC6Q9.eml
+  - Error: System.InvalidOperationException: Ukuran heap melebihi kapasitas block.
+- Validasi ulang dengan runner lokal juga mengonfirmasi file .eml yang sama sebagai titik gagal pertama.
+
+**File Terkait**
+- CodexReport.md
+- tests/Emcode.Pst.Tests/PstNdbWriterIntegrationTests.cs
+- src/Emcode.Pst.Libs/Infrastructure/Ndb/PstNdbWriter.cs
+- src/Emcode.Pst.Libs/Domain/Ltp/LtpWriter.cs
+## Laporan 171 - 24 Feb 2026, 13:49
+Tanggal laporan: 24 Feb 2026, 13:49
+
+**Ringkasan Pertanyaan**
+Meminta menjalankan Plan 63 untuk implementasi generate PST dari nol.
+
+**Statement Jawaban**
+Plan 63 dieksekusi dengan menambahkan kemampuan bootstrap PST baru saat file belum ada melalui opsi CreateIfMissing dan kontrak bootstrap writer. Implementasi utama ada pada PstFile (cek ketersediaan file + delegasi bootstrap), PstNdbWriter (create file baru + inisialisasi header + commit root BBT/NBT kosong), dan NdbBtreeWriter (menulis root page kosong valid saat entri masih kosong). Ditambahkan juga integration test Open_WithCreateIfMissing_ShouldCreateNewPstAndPersistData untuk verifikasi create-from-zero lalu persist folder/message.
+
+Verifikasi yang dijalankan:
+- dotnet test ... --filter FullyQualifiedName~Open_WithCreateIfMissing_ShouldCreateNewPstAndPersistData -> Passed.
+- dotnet test ... --filter FullyQualifiedName~ImportEmlDirectoryTree_FromEnvironmentVariables_ShouldPreserveHierarchy -> Passed.
+
+**File Terkait**
+- src/Emcode.Pst.Libs/Application/Abstractions/IPstFileBootstrapper.cs
+- src/Emcode.Pst.Libs/Application/PstOpenOptions.cs
+- src/Emcode.Pst.Libs/Application/PstFile.cs
+- src/Emcode.Pst.Libs/Infrastructure/Ndb/PstNdbWriter.cs
+- src/Emcode.Pst.Libs/Infrastructure/Ndb/NdbHeaderWriter.cs
+- src/Emcode.Pst.Libs/Infrastructure/Ndb/NdbBtreeWriter.cs
+- tests/Emcode.Pst.Tests/PstNdbWriterIntegrationTests.cs
+- CodexReport.md
+## Laporan 170 - 24 Feb 2026, 13:27
+Tanggal laporan: 24 Feb 2026, 13:27
+
+**Ringkasan Pertanyaan**
+Menanyakan mana yang lebih baik untuk PST: generate file dari nol atau simpan binary file kosong sebagai template.
+
+**Statement Jawaban**
+Direkomendasikan jangka panjang: generate dari nol untuk maintainability, reproducibility, dan menghindari ketergantungan artefak binary. Namun untuk kebutuhan cepat/stabil saat ini, template PST binary lebih pragmatis sebagai langkah sementara sampai generator stabil.
+
+**File Terkait**
+- CodexReport.md
+## Laporan 169 - 24 Feb 2026, 13:23
+Tanggal laporan: 24 Feb 2026, 13:23
+
+**Ringkasan Pertanyaan**
+Meminta dibuat implementasi generate PST dari nol.
+
+**Statement Jawaban**
+Sesuai aturan project, disiapkan plan refactor baru di RefactorPlan.md untuk implementasi kemampuan create PST tanpa template, mencakup perubahan di API open option, writer NDB, bootstrap header/root, serta integration test.
+
+**File Terkait**
+- RefactorPlan.md
+- CodexReport.md
+## Laporan 168 - 24 Feb 2026, 13:19
+Tanggal laporan: 24 Feb 2026, 13:19
+
+**Ringkasan Pertanyaan**
+Meminta cek apakah project src/Emcode.Pst.Libs/Emcode.Pst.Libs.csproj bisa membuat file PST dari kondisi file belum ada.
+
+**Statement Jawaban**
+Dikonfirmasi bahwa .csproj tidak menentukan kemampuan create file PST. Dari implementasi runtime, alur saat ini membutuhkan file PST sudah ada karena PstFile.Open melakukan read terlebih dahulu dan PstNdbWriter.Initialize membuka stream dengan FileMode.Open.
+
+**File Terkait**
+- src/Emcode.Pst.Libs/Emcode.Pst.Libs.csproj
+- src/Emcode.Pst.Libs/Application/PstFile.cs
+- src/Emcode.Pst.Libs/Infrastructure/Ndb/PstNdbWriter.cs
+- CodexReport.md
+## Laporan 167 - 24 Feb 2026, 13:14
+Tanggal laporan: 24 Feb 2026, 13:14
+
+**Ringkasan Pertanyaan**
+Meminta menjalankan Plan 62 (auto-create target PST saat belum ada) lalu menjalankan test copy dari E:\tmp\test-temp\asriany ke E:\tmp\test-temp\asriany@connusa.com.pst.
+
+**Statement Jawaban**
+Plan 62 dieksekusi pada integration test import: ditambahkan env PST_IMPORT_TEMPLATE_PST dan mekanisme pembuatan file target PST dari template jika target belum ada. Saat dijalankan dengan PST_IMPORT_ENABLED=true dan target belum ada, test gagal dengan pesan jelas karena PST_IMPORT_TEMPLATE_PST belum diisi.
+
+**File Terkait**
+- tests/Emcode.Pst.Tests/PstNdbWriterIntegrationTests.cs
+- CodexReport.md
+## Laporan 166 - 24 Feb 2026, 13:04
+Tanggal laporan: 24 Feb 2026, 13:04
+
+**Ringkasan Pertanyaan**
+Meminta menjalankan test copy data dari E:\tmp\test-temp\asriany ke E:\tmp\test-temp\asriany@connusa.com.pst dengan syarat jika target belum ada maka aplikasi membuat file target.
+
+**Statement Jawaban**
+Test terfilter berhasil dijalankan, namun target PST tetap tidak terbentuk karena implementasi test saat ini hanya berjalan bila file target sudah ada. Verifikasi setelah test menunjukkan E:\tmp\test-temp\asriany@connusa.com.pst masih tidak ada.
+
+**File Terkait**
+- CodexReport.md
+- tests/Emcode.Pst.Tests/PstNdbWriterIntegrationTests.cs
+## Laporan 165 - 24 Feb 2026, 12:54
+Tanggal laporan: 24 Feb 2026, 12:54
+
+**Ringkasan Pertanyaan**
+Meminta menjalankan Plan 61 untuk mengubah test agar path import membaca environment variable.
+
+**Statement Jawaban**
+Plan 61 dieksekusi dengan menambah integration test import rekursif .eml berbasis environment variable (PST_IMPORT_ENABLED, PST_IMPORT_SOURCE_DIR, PST_IMPORT_TARGET_PATH) pada PstNdbWriterIntegrationTests. Test default aman untuk commit karena tidak menyimpan path confidential hardcoded. Validasi dilakukan dengan dotnet test --filter FullyQualifiedName~ImportEmlDirectoryTree_FromEnvironmentVariables_ShouldPreserveHierarchy dan hasil lulus.
+
+**File Terkait**
+- tests/Emcode.Pst.Tests/PstNdbWriterIntegrationTests.cs
+- CodexReport.md
+## Laporan 164 - 24 Feb 2026, 12:49
+Tanggal laporan: 24 Feb 2026, 12:49
+
+**Ringkasan Pertanyaan**
+Meminta bantuan mengubah test agar path import dibaca dari environment variable supaya aman untuk commit.
+
+**Statement Jawaban**
+Disiapkan rencana refactor di RefactorPlan.md (nomor terbaru, append paling atas) untuk migrasi path test ke environment variable dan mekanisme skip saat env var belum diisi.
+
+**File Terkait**
+- RefactorPlan.md
+- CodexReport.md
+## Laporan 163 - 24 Feb 2026, 12:46
+Tanggal laporan: 24 Feb 2026, 12:46
+
+**Ringkasan Pertanyaan**
+Menanyakan cara agar test tidak membawa data confidential (folder asriany) ke GitHub.
+
+**Statement Jawaban**
+Diberikan praktik aman: simpan data di luar repo, gunakan environment variable untuk path test, tambahkan local-only ignore via .git/info/exclude, serta verifikasi dengan git status --ignored sebelum push.
+
+**File Terkait**
+- CodexReport.md
+- .gitignore
+## Laporan 162 - 24 Feb 2026, 12:41
+Tanggal laporan: 24 Feb 2026, 12:41
+
+**Ringkasan Pertanyaan**
+Menegaskan bahwa struktur folder E:\tmp\test-temp\asriany dari server email wajib ikut terbentuk di PST target.
+
+**Statement Jawaban**
+Dijelaskan bahwa import harus dilakukan rekursif: setiap folder lokal dibuat sebagai folder PST, lalu setiap file .eml di folder tersebut di-import ke folder PST yang sesuai.
+
+**File Terkait**
+- CodexReport.md
+## Laporan 161 - 24 Feb 2026, 12:36
+Tanggal laporan: 24 Feb 2026, 12:36
+
+**Ringkasan Pertanyaan**
+Meminta cara debug test library untuk import .eml dari folder E:\tmp\test-temp\asriany ke E:\tmp\test-temp\asriany@connusa.com.pst.
+
+**Statement Jawaban**
+Diberikan langkah debug praktis berbasis test xUnit dan opsi debug runtime untuk skenario import .eml ke PST target, termasuk titik breakpoint pada API ImportEml dan parser .eml.
+
+**File Terkait**
+- CodexReport.md
 ## Laporan 160 — 24 Feb 2026, 11:17
 Tanggal laporan: 24 Feb 2026, 11:17
 
@@ -2995,6 +3921,30 @@ Menjawab bisa atau tidaknya membuat library .NET C# untuk baca/tulis PST dari re
 
 **File Terkait**
 - `doc/PST-241112.docx`
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 

@@ -101,12 +101,27 @@ internal sealed class PropertyContextWriter
     /// <returns>Hasil penulisan LTP.</returns>
     public LtpWriteResult BuildResult()
     {
+        try
+        {
+            return BuildResultCore(forceVariableToSubnode: false);
+        }
+        catch (InvalidOperationException ex) when (IsHeapCapacityException(ex))
+        {
+            return BuildResultCore(forceVariableToSubnode: true);
+        }
+    }
+
+    private LtpWriteResult BuildResultCore(bool forceVariableToSubnode)
+    {
+        _subnodes.Clear();
+        _nextSubnodeIndex = 1;
+
         var heap = new LtpWriter.HeapWriter(_options);
         var records = new List<PropertyRecord>();
 
         foreach (var entry in _entries)
         {
-            var record = new PropertyRecord(entry.PropertyId, entry.PropType, BuildValue(entry, heap));
+            var record = new PropertyRecord(entry.PropertyId, entry.PropType, BuildValue(entry, heap, forceVariableToSubnode));
             records.Add(record);
         }
 
@@ -165,24 +180,24 @@ internal sealed class PropertyContextWriter
         return buffer;
     }
 
-    private uint BuildValue(PropertyEntry entry, LtpWriter.HeapWriter heap)
+    private uint BuildValue(PropertyEntry entry, LtpWriter.HeapWriter heap, bool forceVariableToSubnode)
     {
         switch (entry.PropType)
         {
             case PstPropertyType.String:
                 {
                     var text = Encoding.Unicode.GetBytes(entry.GetStringWithNull());
-                    return AddValue(text, heap);
+                    return AddValue(text, heap, forceVariableToSubnode);
                 }
             case PstPropertyType.String8:
                 {
                     var text = Encoding.Latin1.GetBytes(entry.GetStringWithNull());
-                    return AddValue(text, heap);
+                    return AddValue(text, heap, forceVariableToSubnode);
                 }
             case PstPropertyType.Binary:
                 {
                     var data = entry.GetBinary();
-                    return AddValue(data.Span, heap);
+                    return AddValue(data.Span, heap, forceVariableToSubnode);
                 }
             case PstPropertyType.Time:
                 {
@@ -206,9 +221,9 @@ internal sealed class PropertyContextWriter
     /// <param name="data">Data yang akan disimpan.</param>
     /// <param name="heap">Heap target.</param>
     /// <returns>HNID hasil (HID atau NID).</returns>
-    private uint AddValue(ReadOnlySpan<byte> data, LtpWriter.HeapWriter heap)
+    private uint AddValue(ReadOnlySpan<byte> data, LtpWriter.HeapWriter heap, bool forceVariableToSubnode)
     {
-        if (data.Length > _options.MaxInlineValueBytes)
+        if (forceVariableToSubnode || data.Length > _options.MaxInlineValueBytes)
         {
             var nid = AllocateSubnode(data.ToArray());
             return nid.Value;
@@ -216,6 +231,12 @@ internal sealed class PropertyContextWriter
 
         var hid = heap.AddItem(data);
         return hid.Raw;
+    }
+
+    private static bool IsHeapCapacityException(InvalidOperationException ex)
+    {
+        return ex.Message.Contains("Ukuran heap melebihi kapasitas block.", StringComparison.Ordinal)
+            || ex.Message.Contains("HNPAGEMAP melebihi kapasitas block.", StringComparison.Ordinal);
     }
 
     /// <summary>

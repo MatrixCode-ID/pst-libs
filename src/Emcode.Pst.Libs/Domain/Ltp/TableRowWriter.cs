@@ -70,9 +70,24 @@ internal sealed class TableRowWriter
             throw new InvalidOperationException("Kolom table belum didefinisikan.");
         }
 
+        try
+        {
+            return BuildResultCore(forceVariableToSubnode: false);
+        }
+        catch (InvalidOperationException ex) when (IsHeapCapacityException(ex))
+        {
+            return BuildResultCore(forceVariableToSubnode: true);
+        }
+    }
+
+    private LtpWriteResult BuildResultCore(bool forceVariableToSubnode)
+    {
+        _subnodes.Clear();
+        _nextSubnodeIndex = 1;
+
         var heap = new LtpWriter.HeapWriter(_options);
         var rowSize = ResolveRowSize();
-        var rowMatrixRaw = BuildRowMatrix(heap, rowSize);
+        var rowMatrixRaw = BuildRowMatrix(heap, rowSize, forceVariableToSubnode);
         var tcInfo = BuildTcInfo(rowSize, rowMatrixRaw);
         var tcInfoHid = heap.AddItem(tcInfo);
         return new LtpWriteResult(heap.Build(tcInfoHid), _subnodes);
@@ -116,7 +131,7 @@ internal sealed class TableRowWriter
         return (ushort)(size + cebLength);
     }
 
-    private uint BuildRowMatrix(LtpWriter.HeapWriter heap, ushort rowSize)
+    private uint BuildRowMatrix(LtpWriter.HeapWriter heap, ushort rowSize, bool forceVariableToSubnode)
     {
         var cebLength = (ushort)((_columns.Count + 7) / 8);
         var cebStart = rowSize - cebLength;
@@ -134,7 +149,7 @@ internal sealed class TableRowWriter
                     continue;
                 }
 
-                WriteCellValue(rowSpan, column, cell, heap);
+                WriteCellValue(rowSpan, column, cell, heap, forceVariableToSubnode);
                 if (cebLength > 0)
                 {
                     var bitIndex = column.BitIndex;
@@ -198,7 +213,12 @@ internal sealed class TableRowWriter
         return false;
     }
 
-    private void WriteCellValue(Span<byte> row, TableColumnDefinition column, TableCell cell, LtpWriter.HeapWriter heap)
+    private void WriteCellValue(
+        Span<byte> row,
+        TableColumnDefinition column,
+        TableCell cell,
+        LtpWriter.HeapWriter heap,
+        bool forceVariableToSubnode)
     {
         if (column.Size == 0 || column.Offset + column.Size > row.Length)
         {
@@ -210,21 +230,21 @@ internal sealed class TableRowWriter
             case PstPropertyType.String:
                 {
                     var value = Encoding.Unicode.GetBytes($"{cell.GetString()}\0");
-                    var raw = AddValue(value, heap);
+                    var raw = AddValue(value, heap, forceVariableToSubnode);
                     BitConverter.TryWriteBytes(row.Slice(column.Offset, 4), raw);
                     break;
                 }
             case PstPropertyType.String8:
                 {
                     var value = Encoding.Latin1.GetBytes($"{cell.GetString()}\0");
-                    var raw = AddValue(value, heap);
+                    var raw = AddValue(value, heap, forceVariableToSubnode);
                     BitConverter.TryWriteBytes(row.Slice(column.Offset, 4), raw);
                     break;
                 }
             case PstPropertyType.Binary:
                 {
                     var value = cell.GetBinary();
-                    var raw = AddValue(value.Span, heap);
+                    var raw = AddValue(value.Span, heap, forceVariableToSubnode);
                     BitConverter.TryWriteBytes(row.Slice(column.Offset, 4), raw);
                     break;
                 }
@@ -256,9 +276,9 @@ internal sealed class TableRowWriter
     /// <param name="data">Data yang akan disimpan.</param>
     /// <param name="heap">Heap target.</param>
     /// <returns>HNID hasil (HID atau NID).</returns>
-    private uint AddValue(ReadOnlySpan<byte> data, LtpWriter.HeapWriter heap)
+    private uint AddValue(ReadOnlySpan<byte> data, LtpWriter.HeapWriter heap, bool forceVariableToSubnode)
     {
-        if (data.Length > _options.MaxInlineValueBytes)
+        if (forceVariableToSubnode || data.Length > _options.MaxInlineValueBytes)
         {
             var nid = AllocateSubnode(data.ToArray());
             return nid.Value;
@@ -266,6 +286,12 @@ internal sealed class TableRowWriter
 
         var hid = heap.AddItem(data);
         return hid.Raw;
+    }
+
+    private static bool IsHeapCapacityException(InvalidOperationException ex)
+    {
+        return ex.Message.Contains("Ukuran heap melebihi kapasitas block.", StringComparison.Ordinal)
+            || ex.Message.Contains("HNPAGEMAP melebihi kapasitas block.", StringComparison.Ordinal);
     }
 
     /// <summary>

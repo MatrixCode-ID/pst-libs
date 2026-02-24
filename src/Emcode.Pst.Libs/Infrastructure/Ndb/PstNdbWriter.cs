@@ -7,6 +7,7 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using Emcode.Pst.Application;
 using Emcode.Pst.Application.Abstractions;
 using Emcode.Pst.Domain;
 using Emcode.Pst.Infrastructure;
@@ -18,7 +19,7 @@ namespace Emcode.Pst.Infrastructure.Ndb;
 /// <summary>
 /// Implementasi writer PST berbasis NDB untuk persist ke disk (eksperimental).
 /// </summary>
-public sealed class PstNdbWriter : IPstWriter, IPstWriterWithContext, IDisposable
+public sealed class PstNdbWriter : IPstWriter, IPstWriterWithContext, IPstFileBootstrapper, IDisposable
 {
     private const ushort PidTagDisplayName = 0x3001;
     private const ushort PidTagMessageClass = 0x001A;
@@ -66,6 +67,7 @@ public sealed class PstNdbWriter : IPstWriter, IPstWriterWithContext, IDisposabl
     private const int MsgFlagHasAttach = 0x0010;
 
     private readonly PstEmlParser _parser = new();
+    private readonly PstBootstrapBuilder _bootstrapBuilder = new();
     private readonly Dictionary<uint, List<uint>> _tableRowCache = new();
     private LtpWriterOptions _ltpOptions;
     private PstWriteContext? _context;
@@ -101,18 +103,31 @@ public sealed class PstNdbWriter : IPstWriter, IPstWriterWithContext, IDisposabl
     {
         _context = context ?? throw new ArgumentNullException(nameof(context));
         EnsureWritableOptions();
+        EnsureFileInitialized(context.Path, context.Options);
         _stream = new FileStream(context.Path, FileMode.Open, FileAccess.ReadWrite, FileShare.Read);
-        var headerReader = new NdbHeaderReader();
-        _header = headerReader.Read(_stream);
-        _ltpOptions = LtpWriterOptions.CreateDefault(_header.HeaderInfo.Format);
+        try
+        {
+            var headerReader = new NdbHeaderReader();
+            _header = headerReader.Read(_stream);
+            EnsureAmapStateIsWritable(_header);
+            _ltpOptions = LtpWriterOptions.CreateDefault(_header.HeaderInfo.Format);
 
-        var btreeReader = new PstBTreeReader(_stream, _header.HeaderInfo.Format);
-        _existingBbt = new Dictionary<ulong, BbtEntry>(btreeReader.ReadBbt(_header.BbtRoot));
-        _existingNbt = new Dictionary<uint, NbtEntry>(btreeReader.ReadNbt(_header.NbtRoot));
+            var btreeReader = new PstBTreeReader(_stream, _header.HeaderInfo.Format);
+            _existingBbt = new Dictionary<ulong, BbtEntry>(btreeReader.ReadBbt(_header.BbtRoot));
+            _existingNbt = new Dictionary<uint, NbtEntry>(btreeReader.ReadNbt(_header.NbtRoot));
 
-        var maxBidCounter = ResolveMaxBidCounter(_existingBbt.Values);
-        _ndbWriter = new NdbWriter(_stream, _header.HeaderInfo, maxBidCounter);
-        _nidAllocator = new NidAllocator(_existingNbt.Values);
+            var maxBidCounter = ResolveMaxBidCounter(_existingBbt.Values, _header.BbtRoot.Bid, _header.NbtRoot.Bid);
+            var initialBlockBidCounter = ResolveInitialBidCounter(_header.Counters.NextBlockBidRaw, maxBidCounter);
+            var initialPageBidCounter = ResolveInitialBidCounter(_header.Counters.NextPageBidRaw, maxBidCounter);
+            _ndbWriter = new NdbWriter(_stream, _header.HeaderInfo, initialBlockBidCounter, initialPageBidCounter);
+            _nidAllocator = new NidAllocator(_existingNbt.Values, _header.Counters.NidCounters);
+        }
+        catch
+        {
+            _stream?.Dispose();
+            _stream = null;
+            throw;
+        }
     }
 
     /// <summary>
@@ -124,6 +139,72 @@ public sealed class PstNdbWriter : IPstWriter, IPstWriterWithContext, IDisposabl
     {
         cancellationToken.ThrowIfCancellationRequested();
         Initialize(context);
+        return Task.CompletedTask;
+    }
+
+    /// <summary>
+    /// Menyiapkan file PST pada path target bila file belum ada.
+    /// </summary>
+    /// <param name="path">Path file PST target.</param>
+    /// <param name="options">Opsi pembukaan PST.</param>
+    public void EnsureFileInitialized(string path, PstOpenOptions options)
+    {
+        Guard.NotNullOrWhiteSpace(path, nameof(path));
+        Guard.NotNull(options, nameof(options));
+
+        if (File.Exists(path))
+        {
+            return;
+        }
+
+        if (options.ReadOnly)
+        {
+            throw new NotSupportedException("Tidak dapat membuat file PST baru saat opsi ReadOnly = true.");
+        }
+
+        var directory = Path.GetDirectoryName(path);
+        if (!string.IsNullOrWhiteSpace(directory))
+        {
+            Directory.CreateDirectory(directory);
+        }
+
+        using var destination = new FileStream(path, FileMode.CreateNew, FileAccess.ReadWrite, FileShare.Read);
+        _bootstrapBuilder.Build(destination, PstFormat.Unicode, PstCryptMethod.None);
+        destination.Flush();
+    }
+
+    /// <summary>
+    /// Menyiapkan file PST pada path target bila file belum ada secara asynchronous.
+    /// </summary>
+    /// <param name="path">Path file PST target.</param>
+    /// <param name="options">Opsi pembukaan PST.</param>
+    /// <param name="cancellationToken">Token pembatalan operasi.</param>
+    /// <returns>Task representasi proses inisialisasi.</returns>
+    public Task EnsureFileInitializedAsync(string path, PstOpenOptions options, CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        Guard.NotNullOrWhiteSpace(path, nameof(path));
+        Guard.NotNull(options, nameof(options));
+
+        if (File.Exists(path))
+        {
+            return Task.CompletedTask;
+        }
+
+        if (options.ReadOnly)
+        {
+            throw new NotSupportedException("Tidak dapat membuat file PST baru saat opsi ReadOnly = true.");
+        }
+
+        var directory = Path.GetDirectoryName(path);
+        if (!string.IsNullOrWhiteSpace(directory))
+        {
+            Directory.CreateDirectory(directory);
+        }
+
+        using var destination = new FileStream(path, FileMode.CreateNew, FileAccess.ReadWrite, FileShare.Read);
+        _bootstrapBuilder.BuildAsync(destination, PstFormat.Unicode, PstCryptMethod.None, cancellationToken).GetAwaiter().GetResult();
+        destination.Flush();
         return Task.CompletedTask;
     }
 
@@ -272,7 +353,7 @@ public sealed class PstNdbWriter : IPstWriter, IPstWriterWithContext, IDisposabl
     {
         if (_stream is not null && _header is not null && _existingBbt is not null && _existingNbt is not null && _ndbWriter is not null)
         {
-            _ndbWriter.CommitBtrees(_header, _existingBbt, _existingNbt);
+            _ndbWriter.CommitBtrees(_header, _existingBbt, _existingNbt, _nidAllocator?.SnapshotNextNids());
         }
 
         _stream?.Dispose();
@@ -284,7 +365,7 @@ public sealed class PstNdbWriter : IPstWriter, IPstWriterWithContext, IDisposabl
     /// </summary>
     /// <param name="entries">Entri BBT.</param>
     /// <returns>Nilai counter BID maksimum.</returns>
-    private static ulong ResolveMaxBidCounter(IEnumerable<BbtEntry> entries)
+    private static ulong ResolveMaxBidCounter(IEnumerable<BbtEntry> entries, params Bid[] additionalBids)
     {
         var max = 0UL;
         foreach (var entry in entries)
@@ -296,7 +377,48 @@ public sealed class PstNdbWriter : IPstWriter, IPstWriterWithContext, IDisposabl
             }
         }
 
+        foreach (var bid in additionalBids)
+        {
+            var counter = bid.Raw >> 2;
+            if (counter > max)
+            {
+                max = counter;
+            }
+        }
+
         return max;
+    }
+
+    /// <summary>
+    /// Menentukan nilai counter BID awal dari header.bidNext* dengan fallback ke hasil scan BBT.
+    /// </summary>
+    /// <param name="nextBidRaw">Nilai raw bidNext dari header.</param>
+    /// <param name="fallbackCounter">Counter fallback dari scan BBT.</param>
+    /// <returns>Counter BID awal yang aman untuk writer runtime.</returns>
+    private static ulong ResolveInitialBidCounter(ulong nextBidRaw, ulong fallbackCounter)
+    {
+        if (nextBidRaw < 4)
+        {
+            return fallbackCounter;
+        }
+
+        var headerCounter = (nextBidRaw >> 2) - 1;
+        return headerCounter > fallbackCounter ? headerCounter : fallbackCounter;
+    }
+
+    /// <summary>
+    /// Memastikan file tidak dalam state AMap invalid sebelum operasi write.
+    /// </summary>
+    /// <param name="header">Metadata header PST.</param>
+    private static void EnsureAmapStateIsWritable(NdbHeader header)
+    {
+        if (header.RootState.IsAMapValid)
+        {
+            return;
+        }
+
+        throw new InvalidOperationException(
+            "HEADER.ROOT.fAMapValid bernilai invalid. Recovery AMap belum didukung, operasi write dibatalkan.");
     }
 
     /// <summary>
@@ -1186,13 +1308,24 @@ public sealed class PstNdbWriter : IPstWriter, IPstWriterWithContext, IDisposabl
     private sealed class NidAllocator
     {
         private readonly Dictionary<NidType, uint> _nextIndex = new();
+        private readonly uint[] _headerCounters;
 
         /// <summary>
         /// Membuat allocator NID dari entri NBT yang sudah ada.
         /// </summary>
         /// <param name="entries">Entri NBT.</param>
-        public NidAllocator(IEnumerable<NbtEntry> entries)
+        /// <param name="headerCounters">Snapshot counter rgnid[] dari header.</param>
+        public NidAllocator(IEnumerable<NbtEntry> entries, IReadOnlyList<uint> headerCounters)
         {
+            _headerCounters = new uint[32];
+            if (headerCounters is not null)
+            {
+                for (var i = 0; i < _headerCounters.Length && i < headerCounters.Count; i++)
+                {
+                    _headerCounters[i] = headerCounters[i];
+                }
+            }
+
             foreach (var entry in entries)
             {
                 var type = entry.Nid.Type;
@@ -1207,6 +1340,34 @@ public sealed class PstNdbWriter : IPstWriter, IPstWriterWithContext, IDisposabl
                 else
                 {
                     _nextIndex[type] = index + 1;
+                }
+            }
+
+            foreach (NidType type in Enum.GetValues(typeof(NidType)))
+            {
+                var slot = (int)type;
+                if (slot < 0 || slot >= _headerCounters.Length)
+                {
+                    continue;
+                }
+
+                var raw = _headerCounters[slot];
+                var indexFromHeader = raw >> 5;
+                if (indexFromHeader == 0)
+                {
+                    continue;
+                }
+
+                if (_nextIndex.TryGetValue(type, out var current))
+                {
+                    if (indexFromHeader > current)
+                    {
+                        _nextIndex[type] = indexFromHeader;
+                    }
+                }
+                else
+                {
+                    _nextIndex[type] = indexFromHeader;
                 }
             }
         }
@@ -1230,6 +1391,32 @@ public sealed class PstNdbWriter : IPstWriter, IPstWriterWithContext, IDisposabl
 
             var value = (index << 5) | (uint)type;
             return new Nid(value);
+        }
+
+        /// <summary>
+        /// Mengambil snapshot nilai NID berikutnya per tipe untuk dipersist ke rgnid[].
+        /// </summary>
+        /// <returns>Dictionary tipe NID ke nilai raw NID berikutnya.</returns>
+        public IReadOnlyDictionary<NidType, uint> SnapshotNextNids()
+        {
+            var snapshot = new Dictionary<NidType, uint>();
+            foreach (NidType type in Enum.GetValues(typeof(NidType)))
+            {
+                if (!_nextIndex.TryGetValue(type, out var index))
+                {
+                    var slot = (int)type;
+                    if (slot >= 0 && slot < _headerCounters.Length && _headerCounters[slot] > 0)
+                    {
+                        snapshot[type] = _headerCounters[slot];
+                    }
+
+                    continue;
+                }
+
+                snapshot[type] = (index << 5) | (uint)type;
+            }
+
+            return snapshot;
         }
     }
 }

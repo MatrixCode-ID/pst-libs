@@ -18,19 +18,26 @@ internal sealed class NdbWriter
     private readonly NdbWriterCore _core;
     private readonly NdbBlockWriter _blockWriter;
     private readonly NdbBtreeWriter _btreeWriter = new();
+    private bool _allocationTransactionStarted;
 
     /// <summary>
     /// Membuat writer NDB.
     /// </summary>
     /// <param name="stream">Stream PST.</param>
     /// <param name="header">Header PST.</param>
-    /// <param name="initialBidCounter">Counter awal BID untuk melanjutkan alokasi.</param>
+    /// <param name="initialBlockBidCounter">Counter awal BID block untuk melanjutkan alokasi.</param>
+    /// <param name="initialPageBidCounter">Counter awal BID page untuk melanjutkan alokasi.</param>
     /// <param name="initialOffset">Offset awal untuk alokasi block; default memakai ukuran file.</param>
-    public NdbWriter(Stream stream, PstHeaderInfo header, ulong? initialBidCounter = null, ulong? initialOffset = null)
+    public NdbWriter(
+        Stream stream,
+        PstHeaderInfo header,
+        ulong? initialBlockBidCounter = null,
+        ulong? initialPageBidCounter = null,
+        ulong? initialOffset = null)
     {
         _stream = stream ?? throw new ArgumentNullException(nameof(stream));
         _format = header.Format;
-        _core = new NdbWriterCore(header, initialOffset, initialBidCounter);
+        _core = new NdbWriterCore(header, initialOffset, initialBlockBidCounter, initialPageBidCounter);
         _blockWriter = new NdbBlockWriter(_stream, _core, header.CryptMethod);
     }
 
@@ -41,6 +48,7 @@ internal sealed class NdbWriter
     /// <returns>Entry BBT.</returns>
     public BbtEntry WriteExternalBlock(ReadOnlySpan<byte> data)
     {
+        EnsureAllocationTransactionStarted();
         var allocation = _blockWriter.WriteExternalBlock(data);
         var entry = new BbtEntry(allocation.Bid, allocation.Ib, allocation.DataSize, 1);
         _btreeWriter.UpsertBbtEntry(entry);
@@ -54,6 +62,7 @@ internal sealed class NdbWriter
     /// <returns>Entry BBT.</returns>
     public BbtEntry WriteInternalBlock(ReadOnlySpan<byte> data)
     {
+        EnsureAllocationTransactionStarted();
         var allocation = _blockWriter.WriteInternalBlock(data);
         var entry = new BbtEntry(allocation.Bid, allocation.Ib, allocation.DataSize, 1);
         _btreeWriter.UpsertBbtEntry(entry);
@@ -67,12 +76,13 @@ internal sealed class NdbWriter
     /// <returns>BID root data tree.</returns>
     public Bid WriteDataTree(ReadOnlyMemory<byte> data)
     {
-        if (data.Length <= _core.BlockSize)
+        EnsureAllocationTransactionStarted();
+        if (data.Length <= _core.MaxBlockDataSize)
         {
             return WriteExternalBlock(data.Span).Bid;
         }
 
-        var chunkSize = _core.BlockSize;
+        var chunkSize = _core.MaxBlockDataSize;
         var childBids = new List<Bid>();
         var offset = 0;
         while (offset < data.Length)
@@ -95,14 +105,15 @@ internal sealed class NdbWriter
     public async Task<Bid> WriteDataTreeAsync(ReadOnlyMemory<byte> data, CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
-        if (data.Length <= _core.BlockSize)
+        EnsureAllocationTransactionStarted();
+        if (data.Length <= _core.MaxBlockDataSize)
         {
             var entry = await _blockWriter.WriteExternalBlockAsync(data, cancellationToken).ConfigureAwait(false);
             _btreeWriter.UpsertBbtEntry(new BbtEntry(entry.Bid, entry.Ib, entry.DataSize, 1));
             return entry.Bid;
         }
 
-        var chunkSize = _core.BlockSize;
+        var chunkSize = _core.MaxBlockDataSize;
         var childBids = new List<Bid>();
         var offset = 0;
         while (offset < data.Length)
@@ -121,7 +132,7 @@ internal sealed class NdbWriter
     private Bid WriteDataTreeFromChildren(IReadOnlyList<Bid> childBids, uint totalLength)
     {
         var bidSize = _format == PstFormat.Unicode ? 8 : 4;
-        var cEntMax = (_core.BlockSize - 8) / bidSize;
+        var cEntMax = (_core.MaxBlockDataSize - 8) / bidSize;
         if (cEntMax <= 0)
         {
             throw new InvalidOperationException("Ukuran block terlalu kecil untuk XBLOCK.");
@@ -216,8 +227,11 @@ internal sealed class NdbWriter
     public PstHeaderInfo CommitBtrees(
         NdbHeader header,
         IReadOnlyDictionary<ulong, BbtEntry> existingBbt,
-        IReadOnlyDictionary<uint, NbtEntry> existingNbt)
+        IReadOnlyDictionary<uint, NbtEntry> existingNbt,
+        IReadOnlyDictionary<NidType, uint>? nextNidCounters = null)
     {
+        EnsureAllocationTransactionStarted();
+
         var mergedBbt = new Dictionary<ulong, BbtEntry>(existingBbt);
         foreach (var entry in _btreeWriter.SnapshotBbt())
         {
@@ -236,6 +250,70 @@ internal sealed class NdbWriter
 
         var headerWriter = new NdbHeaderWriter(_stream);
         headerWriter.UpdateBtreeRoots(header.HeaderInfo.Format, bbtRoot, nbtRoot);
+        headerWriter.UpdateBidCounters(
+            header.HeaderInfo.Format,
+            _core.NextBlockBidRaw,
+            _core.NextPageBidRaw);
+        var allocationMapWriter = new NdbAllocationMapWriter(_stream, _format, header.RootState.IbAMapLast);
+        var mapState = allocationMapWriter.ApplyAllocatedRanges(_core.SnapshotAllocationRanges());
+        var fileEof = (ulong)_stream.Length;
+        headerWriter.UpdateRootAllocationMetadata(
+            header.HeaderInfo.Format,
+            fileEof,
+            mapState.IbAMapLast,
+            mapState.CbAMapFree,
+            header.RootState.CbPMapFree);
+
+        if (nextNidCounters is not null)
+        {
+            var mergedCounters = MergeNidCounters(header.Counters.NidCounters, nextNidCounters);
+            headerWriter.UpdateRgnidCounters(header.HeaderInfo.Format, mergedCounters);
+        }
+
+        headerWriter.SetAMapValid(header.HeaderInfo.Format, isValid: true);
+        headerWriter.UpdateHeaderCrcs(header.HeaderInfo.Format);
         return headerWriter.UpdateFileSize(header.HeaderInfo);
+    }
+
+    private static uint[] MergeNidCounters(uint[] existingCounters, IReadOnlyDictionary<NidType, uint> updates)
+    {
+        var merged = new uint[32];
+        if (existingCounters is not null)
+        {
+            Array.Copy(existingCounters, merged, Math.Min(existingCounters.Length, merged.Length));
+        }
+
+        foreach (var item in updates)
+        {
+            var index = (int)item.Key;
+            if (index < 0 || index >= merged.Length)
+            {
+                continue;
+            }
+
+            if (item.Value > merged[index])
+            {
+                merged[index] = item.Value;
+            }
+        }
+
+        return merged;
+    }
+
+    private void EnsureAllocationTransactionStarted()
+    {
+        if (_allocationTransactionStarted)
+        {
+            return;
+        }
+
+        if (_stream.Length >= 0x220)
+        {
+            var headerWriter = new NdbHeaderWriter(_stream);
+            headerWriter.SetAMapValid(_format, isValid: false);
+            headerWriter.UpdateHeaderCrcs(_format);
+        }
+
+        _allocationTransactionStarted = true;
     }
 }

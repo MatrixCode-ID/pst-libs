@@ -6,6 +6,11 @@ namespace Emcode.Pst.Application;
 public sealed class PstOpenOptions
 {
     /// <summary>
+    /// Menentukan apakah file PST dibuat otomatis bila path target belum ada.
+    /// </summary>
+    public bool CreateIfMissing { get; init; }
+
+    /// <summary>
     /// Menentukan apakah file dibuka dalam mode hanya-baca.
     /// </summary>
     public bool ReadOnly { get; init; } = true;

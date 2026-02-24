@@ -69,7 +69,7 @@ internal sealed class NdbBtreeWriter
     public Bref WriteBbt(NdbBlockWriter blockWriter, PstFormat format, IEnumerable<BbtEntry> entries)
     {
         var ordered = entries.OrderBy(entry => entry.Bid.NormalizeForLookup()).ToList();
-        return WriteBtreePages(blockWriter, format, ordered.Select(BuildBbtEntry).ToList(),
+        return WriteBtreePages(blockWriter, format, NdbPageType.Bbt, ordered.Select(BuildBbtEntry).ToList(),
             format == PstFormat.Unicode ? 24 : 16,
             format == PstFormat.Unicode ? 24 : 12);
     }
@@ -84,7 +84,7 @@ internal sealed class NdbBtreeWriter
     public Bref WriteNbt(NdbBlockWriter blockWriter, PstFormat format, IEnumerable<NbtEntry> entries)
     {
         var ordered = entries.OrderBy(entry => entry.Nid.Value).ToList();
-        return WriteBtreePages(blockWriter, format, ordered.Select(BuildNbtEntry).ToList(),
+        return WriteBtreePages(blockWriter, format, NdbPageType.Nbt, ordered.Select(BuildNbtEntry).ToList(),
             format == PstFormat.Unicode ? 32 : 16,
             format == PstFormat.Unicode ? 24 : 12);
     }
@@ -92,20 +92,23 @@ internal sealed class NdbBtreeWriter
     private static Bref WriteBtreePages(
         NdbBlockWriter blockWriter,
         PstFormat format,
+        byte pageType,
         IReadOnlyList<BtreeEntry> entries,
         int leafEntrySize,
         int intermediateEntrySize)
     {
         if (entries.Count == 0)
         {
-            return new Bref(new Bid(0), 0);
+            var emptyRoot = BuildEmptyLeafPage(format, leafEntrySize);
+            var allocation = blockWriter.WritePage(emptyRoot, pageType);
+            return new Bref(allocation.Bid, allocation.Ib);
         }
 
         var pages = BuildLeafPages(format, entries, leafEntrySize);
         var current = new List<PageRef>(pages.Count);
         foreach (var page in pages)
         {
-            var allocation = blockWriter.WriteExternalBlock(page.Data, encode: false);
+            var allocation = blockWriter.WritePage(page.Data, pageType);
             current.Add(new PageRef(page.Key, allocation));
         }
 
@@ -116,18 +119,23 @@ internal sealed class NdbBtreeWriter
             throw new InvalidOperationException("Ukuran entry terlalu besar untuk halaman B-Tree.");
         }
 
+        byte currentLevel = 1;
         while (current.Count > 1)
         {
             var next = new List<PageRef>();
             for (var i = 0; i < current.Count; i += cEntMax)
             {
                 var chunk = current.Skip(i).Take(cEntMax).ToList();
-                var page = BuildIntermediatePage(format, chunk, intermediateEntrySize, cEntMax);
-                var allocation = blockWriter.WriteExternalBlock(page, encode: false);
+                var page = BuildIntermediatePage(format, chunk, intermediateEntrySize, cEntMax, currentLevel);
+                var allocation = blockWriter.WritePage(page, pageType);
                 next.Add(new PageRef(chunk[0].Key, allocation));
             }
 
             current = next;
+            checked
+            {
+                currentLevel++;
+            }
         }
 
         var root = current[0];
@@ -162,11 +170,26 @@ internal sealed class NdbBtreeWriter
         return pages;
     }
 
+    private static byte[] BuildEmptyLeafPage(PstFormat format, int cbEnt)
+    {
+        var page = new byte[512];
+        var entryAreaSize = GetEntryAreaSize(format);
+        var cEntMax = entryAreaSize / cbEnt;
+        if (cEntMax == 0)
+        {
+            throw new InvalidOperationException("Ukuran entry terlalu besar untuk halaman B-Tree.");
+        }
+
+        WritePageHeader(page, format, cEnt: 0, (byte)cEntMax, (byte)cbEnt, cLevel: 0);
+        return page;
+    }
+
     private static byte[] BuildIntermediatePage(
         PstFormat format,
         IReadOnlyList<PageRef> children,
         int cbEnt,
-        int cEntMax)
+        int cEntMax,
+        byte cLevel)
     {
         var page = new byte[512];
         for (var i = 0; i < children.Count; i++)
@@ -175,7 +198,7 @@ internal sealed class NdbBtreeWriter
             WriteIntermediateEntry(page.AsSpan(i * cbEnt, cbEnt), format, child.Key, child.Allocation);
         }
 
-        WritePageHeader(page, format, (byte)children.Count, (byte)cEntMax, (byte)cbEnt, 1);
+        WritePageHeader(page, format, (byte)children.Count, (byte)cEntMax, (byte)cbEnt, cLevel);
         return page;
     }
 

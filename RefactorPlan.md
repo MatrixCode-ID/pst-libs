@@ -1,3 +1,345 @@
+## Plan 70 - 24 Feb 2026, 15:06
+Tanggal plan: 24 Feb 2026, 15:06
+
+**Ringkasan**
+Menyesuaikan aturan `COMMIT & VERSIONING` pada `AGENTS.md`: saat commit di branch selain `main`, tidak wajib update versi package dan `ChangeLogs.md`; pencatatan changelog dan kenaikan versi dilakukan ketika perubahan masuk ke `main`.
+
+**Sumber**
+- Permintaan user update aturan commit branch non-main - 24 Feb 2026
+
+**Lingkup**
+- AGENTS.md
+
+**Rencana Prioritas**
+1. Update section `6. COMMIT & VERSIONING RULES` di `AGENTS.md` dengan policy berbasis branch:
+   - branch `main`: aturan existing tetap (wajib tanya tipe versi, update versi, update `ChangeLogs.md` sebelum commit),
+   - branch non-`main`: tidak wajib update versi dan `ChangeLogs.md` saat commit.
+2. Tambahkan aturan eksplisit untuk merge ke `main`:
+   - saat proses merge/persiapan release ke `main`, wajib lakukan kenaikan versi dan update `ChangeLogs.md`.
+3. Jaga konsistensi wording agar tidak konflik dengan `LOGGING RULES` dan `REFACTOR RULES`.
+4. Verifikasi dokumen akhir tidak ambigu untuk skenario:
+   - commit rutin di feature branch,
+   - commit hotfix langsung di `main`,
+   - merge feature branch ke `main`.
+
+**Kriteria Selesai**
+- `AGENTS.md` memuat aturan jelas bahwa commit branch non-`main` tidak mewajibkan changelog/version bump.
+- Aturan untuk `main` tetap menjaga proses versioning dan changelog.
+- Tidak ada konflik antar rule pada dokumen.
+
+## Plan 69 - 24 Feb 2026, 14:56
+Tanggal plan: 24 Feb 2026, 14:56
+
+**Ringkasan**
+Memperbaiki compliance struktur penulisan PST (fokus header/bootstrap) agar file hasil create/import dikenali valid oleh Outlook, dengan baseline pembanding `E:\tmp\test-temp\Reference.pst` dan temuan mismatch pada Laporan 198.
+
+**Sumber**
+- Permintaan user untuk membuat plan perbaikan berdasarkan Laporan 198 - 24 Feb 2026
+- Hasil perbandingan struktur `Reference.pst` vs `asriany@connusa.com.pst` (Laporan 198)
+- Referensi spesifikasi: `doc/PST-241112.htm` (Header, ROOT, bitmap fields, CRC)
+
+**Lingkup**
+- src/Emcode.Pst.Libs/Infrastructure/Ndb/NdbHeaderWriter.cs
+- src/Emcode.Pst.Libs/Infrastructure/Ndb/PstBootstrapBuilder.cs
+- src/Emcode.Pst.Libs/Infrastructure/Ndb/NdbHeaderReader.cs
+- src/Emcode.Pst.Libs/Infrastructure/Ndb/PstNdbWriter.cs
+- tests/Emcode.Pst.Tests/NdbWriterTests.cs
+- tests/Emcode.Pst.Tests/PstNdbWriterIntegrationTests.cs
+- tests/Emcode.Pst.Tests/** (test baru untuk perbandingan header baseline)
+
+**Rencana Prioritas**
+1. Bentuk checklist compliance header Unicode PST dari spesifikasi dan baseline Outlook:
+   - `wMagicClient`
+   - `wVerClient`
+   - `bPlatformCreate`, `bPlatformAccess`
+   - `rgbFM`, `rgbFP`
+   - `bCryptMethod`
+   - field ROOT + CRC header.
+2. Refactor `NdbHeaderWriter.InitializeEmptyHeader(...)` agar menulis nilai mandatory client/platform dengan default interoperable Outlook:
+   - set `wMagicClient=0x4D53`,
+   - set `wVerClient` dan field platform ke nilai valid,
+   - inisialisasi field reserved sesuai baseline.
+3. Implement inisialisasi bitmap header (`rgbFM`/`rgbFP`) sesuai aturan spesifikasi (bukan zeroed), termasuk validasi offset dan panjang field.
+4. Revisit default `bCryptMethod` pada bootstrap agar konsisten dengan target interoperabilitas Outlook (gunakan mode yang kompatibel dan konsisten di seluruh pipeline write/read).
+5. Pastikan `PstBootstrapBuilder` menulis urutan bootstrap yang deterministik:
+   - header mandatory fields
+   - ROOT metadata awal
+   - BBT/NBT baseline
+   - finalisasi CRC header setelah semua field final.
+6. Tambahkan validasi internal pasca-bootstrap:
+   - parse ulang header dari file hasil bootstrap,
+   - assert semua mandatory field non-default/valid,
+   - assert konsistensi `fAMapValid`, root pointers, CRC.
+7. Tambahkan test regresi berbasis pembanding nyata:
+   - test byte-level subset field kritis terhadap pola expected dari file referensi Outlook,
+   - test open ulang file hasil bootstrap + import `.eml` dengan mode validasi checksum aktif.
+8. Tambahkan guard diagnostik di flow create/write:
+   - jika header mandatory field invalid setelah commit, fail-fast dengan pesan spesifik field.
+9. Jalankan test terfilter writer/bootstrap/import, lalu verifikasi manual buka PST hasil akhir di Outlook.
+
+**Kriteria Selesai**
+- File PST hasil `CreateIfMissing` dan import `.eml` dikenali valid oleh Outlook (tanpa error format/corruption).
+- Field header mandatory (`wMagicClient`, `wVerClient`, platform, bitmap header, crypt method) sesuai compliance checklist.
+- Test byte-level compliance baru lulus dan mencegah regresi struktur.
+
+## Plan 68 - 24 Feb 2026, 14:30
+Tanggal plan: 24 Feb 2026, 14:30
+
+**Ringkasan**
+Mengganti metode pembuatan file PST baru agar tidak lagi menyalin dari embedded resource `blank.pst`, tetapi membangun struktur PST awal secara programatik mengikuti spesifikasi referensi.
+
+**Sumber**
+- Permintaan user mengganti metode tulis PST baru tanpa `blank.pst` - 24 Feb 2026
+- Referensi spesifikasi: `doc/PST-241112.docx`, `doc/PST-241112.htm`
+
+**Lingkup**
+- src/Emcode.Pst.Libs/Infrastructure/Ndb/PstNdbWriter.cs
+- src/Emcode.Pst.Libs/Infrastructure/Ndb/NdbHeaderWriter.cs
+- src/Emcode.Pst.Libs/Infrastructure/Ndb/NdbWriterCore.cs
+- src/Emcode.Pst.Libs/Infrastructure/Ndb/** (bootstrap builder baru)
+- src/Emcode.Pst.Libs/Emcode.Pst.Libs.csproj
+- tests/Emcode.Pst.Tests/PstNdbWriterIntegrationTests.cs
+- tests/Emcode.Pst.Tests/NdbWriterTests.cs
+
+**Rencana Prioritas**
+1. Rancang `PstBootstrapBuilder` baru untuk membuat PST baseline dari nol: header, ROOT, page map minimum, dan root BBT/NBT valid.
+2. Implementasikan penulisan byte-level baseline sesuai spesifikasi Unicode PST: magic/header fields, `bidNextB`, `bidNextP`, `rgnid[]`, `fAMapValid`, `ibFileEof`, `ibAMapLast`, dan CRC header.
+3. Implementasikan inisialisasi page/block minimum yang dibutuhkan agar file dapat dibuka reader internal dan Outlook tanpa bergantung file template.
+4. Integrasikan ke `PstNdbWriter.EnsureFileInitialized(...)` agar mode `CreateIfMissing` memakai builder baru, bukan `OpenBlankPstResourceStream()`.
+5. Hapus ketergantungan embedded resource `blank.pst` dari `.csproj` jika sudah tidak diperlukan.
+6. Tambahkan/ubah test:
+   - verifikasi create-if-missing tidak membaca resource,
+   - verifikasi PST baru bisa create folder/message/import `.eml`,
+   - verifikasi byte-level field header/ROOT kritikal.
+7. Jalankan test terfilter writer + integration import, lalu validasi buka di Outlook untuk file hasil bootstrap baru.
+
+**Kriteria Selesai**
+- Pembuatan PST baru tidak lagi menggunakan `blank.pst`.
+- Struktur PST baseline dibangun dari kode dan konsisten dengan referensi spesifikasi.
+- Flow `CreateIfMissing` tetap lulus test dan PST hasilnya dapat dipakai import `.eml` serta terbuka di Outlook.
+
+## Plan 67 - 24 Feb 2026, 13:51
+Tanggal plan: 24 Feb 2026, 13:51
+
+**Ringkasan**
+Melanjutkan compliance writer PST ke fase allocation metadata dan transactional safety: implementasi `AMap` + lifecycle `fAMapValid`, serta sinkronisasi penuh counter header agar hasil write lebih stabil untuk Outlook.
+
+**Sumber**
+- Permintaan user untuk menyiapkan plan fase selanjutnya - 24 Feb 2026
+- Sisa gap dari eksekusi Plan 66 - 24 Feb 2026
+- Referensi spesifikasi `doc/PST-241112.htm` (section alokasi, `ROOT`, `fAMapValid`, page/block update)
+
+**Lingkup**
+- src/Emcode.Pst.Libs/Infrastructure/Ndb/NdbWriterCore.cs
+- src/Emcode.Pst.Libs/Infrastructure/Ndb/NdbWriter.cs
+- src/Emcode.Pst.Libs/Infrastructure/Ndb/NdbHeaderWriter.cs
+- src/Emcode.Pst.Libs/Infrastructure/Ndb/NdbHeaderReader.cs
+- src/Emcode.Pst.Libs/Infrastructure/Ndb/PstNdbWriter.cs
+- src/Emcode.Pst.Libs/Infrastructure/Ndb/** (komponen baru untuk AMap / allocation metadata)
+- tests/Emcode.Pst.Tests/**
+
+**Rencana Prioritas**
+1. Tambahkan model metadata alokasi internal (state `ibAMapLast`, `cbAMapFree`, `cbPMapFree`, status `fAMapValid`) yang dibaca dari header saat initialize.
+2. Implementasikan service `NdbAllocationMapWriter` untuk update bit allocation di `AMap` saat allocate/free block/page.
+3. Integrasikan update `ROOT` fields pada setiap mutasi alokasi:
+   - `ibAMapLast`
+   - `cbAMapFree`
+   - `cbPMapFree` (tetap sesuai aturan spesifikasi)
+   - `ibFileEof` saat grow file.
+4. Terapkan lifecycle transactional `fAMapValid`:
+   - set ke invalid sebelum mutasi alokasi dimulai,
+   - set ke valid setelah commit selesai dan CRC header sudah final.
+5. Lengkapi sinkronisasi counter header:
+   - persist `rgnid[nidType]` dari alokasi node/folder/message/attachment,
+   - pastikan `bidNextB` dan `bidNextP` konsisten terhadap allocator runtime.
+6. Perkuat urutan commit menjadi atomic-like sequence:
+   - allocate/write data
+   - update BBT/NBT
+   - update AMap/ROOT counters
+   - update header CRC final.
+7. Tambahkan guard read/write:
+   - validasi `fAMapValid` sebelum operasi write,
+   - fail-fast dengan pesan jelas bila state invalid dan recovery belum didukung.
+8. Tambah test compliance fase 2:
+   - test bit AMap berubah sesuai alokasi block/page,
+   - test `fAMapValid` transition invalid->valid,
+   - test `rgnid` increment per `nidType`,
+   - test konsistensi `ibFileEof`/`ibAMapLast` setelah file growth.
+9. Jalankan test terfilter + integration test import `.eml` dan validasi output PST terbaru.
+
+**Kriteria Selesai**
+- Allocation map (`AMap`) ter-update saat operasi write dan konsisten dengan data yang dialokasikan.
+- `fAMapValid` menerapkan lifecycle transactional yang sesuai spesifikasi.
+- Counter `rgnid`, `bidNextB`, `bidNextP`, serta field `ROOT` sinkron setelah operasi create/import.
+- Test compliance fase 2 lulus dan regresi terhadap flow existing tetap aman.
+
+## Plan 66 - 24 Feb 2026, 13:32
+Tanggal plan: 24 Feb 2026, 13:32
+
+**Ringkasan**
+Menyusun dan mengeksekusi roadmap compliance writer PST agar output library sesuai spesifikasi `doc/PST-241112.htm` dan interoperable dengan Microsoft Outlook.
+
+**Sumber**
+- Permintaan user untuk membuat plan update libs agar compliance dengan `doc/PST-241112.htm` - 24 Feb 2026
+- Hasil audit compliance `doc/AuditReports/AuditReport_0004_20260224_S055.md` - 24 Feb 2026
+
+**Lingkup**
+- src/Emcode.Pst.Libs/Infrastructure/Ndb/NdbBtreeWriter.cs
+- src/Emcode.Pst.Libs/Infrastructure/Ndb/NdbHeaderWriter.cs
+- src/Emcode.Pst.Libs/Infrastructure/Ndb/NdbBlockWriter.cs
+- src/Emcode.Pst.Libs/Infrastructure/Ndb/NdbWriter.cs
+- src/Emcode.Pst.Libs/Infrastructure/Ndb/PstNdbWriter.cs
+- src/Emcode.Pst.Libs/Infrastructure/Ndb/NdbWriterCore.cs
+- src/Emcode.Pst.Libs/Infrastructure/Ndb/** (komponen baru yang diperlukan untuk trailer, CRC, signature, dan allocation map)
+- tests/Emcode.Pst.Tests/**
+
+**Rencana Prioritas**
+1. Bentuk matriks compliance per section spesifikasi (`HEADER`, `ROOT`, `PAGETRAILER`, `BTPAGE`, `BLOCKTRAILER`, alokasi `AMap/PMap/FMap/FPMap/DList`) sebagai baseline implementasi.
+2. Implementasikan utilitas algoritma `CRC` dan `page/block signature` sesuai section algoritma di `PST-241112.htm` untuk dipakai lintas writer.
+3. Tambahkan writer khusus page 512-byte dengan inisialisasi `PAGETRAILER` lengkap (`ptype`, `ptypeRepeat`, `wSig`, `dwCRC`, `bid`) dan pemisahan jelas antara alokasi page vs block.
+4. Refactor `NdbBtreeWriter` agar semua halaman BBT/NBT ditulis melalui page writer baru dan mengikuti ketentuan `BTPAGE` (`rgentries`, `cEnt`, `cEntMax`, `cbEnt`, `cLevel`, `dwPadding`).
+5. Lengkapi `NdbBlockWriter` untuk inisialisasi `BLOCKTRAILER` (termasuk CRC) pada block internal/eksternal serta tetap mematuhi encoding `bCryptMethod`.
+6. Refactor `NdbHeaderWriter` agar menulis update header penuh: `ibFileEof`, `ibAMapLast`, `cbAMapFree`, `cbPMapFree`, `BREFNBT`, `BREFBBT`, `fAMapValid`, `bidNextB`, `bidNextP`, `rgnid[]`, `dwUnique`, `dwCRCPartial`, `dwCRCFull`.
+7. Implementasikan manager metadata alokasi untuk update `AMap` dan sinkronisasi counter free-space/root saat allocate, grow, dan free.
+8. Terapkan lifecycle write yang aman: set `fAMapValid` invalid saat mutasi alokasi dimulai, lalu restore valid setelah commit selesai (sesuai model recovery pada spesifikasi).
+9. Sinkronkan alokasi NID/BID dengan field header (`rgnid[nidType]`, `bidNextB`, `bidNextP`) agar tidak drift dari kondisi NBT/BBT aktual.
+10. Refactor pipeline commit di `PstNdbWriter`/`NdbWriter` menjadi alur deterministik: write blocks/pages -> update trees -> update allocation/header -> finalize CRC/trailer.
+11. Tambahkan test compliance struktural untuk validasi byte-level: trailer page/block, CRC header, root counters, dan konsistensi BBT/NBT setelah import EML bertingkat.
+12. Jalankan suite test terfilter dan full test; lanjutkan verifikasi manual buka hasil PST di Outlook untuk memastikan interoperability akhir.
+
+**Kriteria Selesai**
+- Writer menghasilkan file PST yang lulus test compliance internal berbasis spesifikasi `PST-241112.htm`.
+- Field `PAGETRAILER`, `BLOCKTRAILER`, `HEADER` dan `ROOT` konsisten serta tervalidasi CRC/signature.
+- Counter `bidNextB`, `bidNextP`, dan `rgnid[]` tersinkron dengan hasil alokasi aktual.
+- Skenario import folder `.eml` bertingkat menghasilkan PST yang dapat dibuka di Microsoft Outlook tanpa error format.
+
+## Plan 65 - 24 Feb 2026, 14:42
+Tanggal plan: 24 Feb 2026, 14:42
+
+**Ringkasan**
+Menambahkan lank.pst sebagai binary resource di library, lalu mengubah alur pembuatan PST baru agar menyalin dari resource tersebut sebelum proses write.
+
+**Sumber**
+- Permintaan user update Emcode.Pst.Libs.csproj dan penggunaan lank.pst embedded resource - 24 Feb 2026
+
+**Lingkup**
+- src/Emcode.Pst.Libs/Emcode.Pst.Libs.csproj
+- src/Emcode.Pst.Libs/blank.pst
+- src/Emcode.Pst.Libs/Infrastructure/Ndb/PstNdbWriter.cs
+- (opsional) src/Emcode.Pst.Libs/Application/PstFile.cs
+- tests/Emcode.Pst.Tests/**
+
+**Rencana Prioritas**
+1. Tambahkan lank.pst ke project sebagai embedded binary resource.
+2. Implementasikan loader resource di writer untuk menyalin lank.pst ke path target saat file PST belum ada.
+3. Ubah flow CreateIfMissing agar sumber file awal berasal dari resource, bukan bootstrap header raw.
+4. Tambahkan/ubah test integration untuk memastikan create-if-missing memakai resource template dan tetap bisa write/read ulang.
+5. Jalankan test terfilter untuk validasi flow baru.
+
+**Kriteria Selesai**
+- lank.pst ter-embed di assembly Emcode.Pst.Libs.
+- Pembuatan file PST baru otomatis menyalin dari resource lank.pst.
+- Flow import/write tetap berjalan dan lolos test terkait.
+## Plan 64 - 24 Feb 2026, 14:22
+Tanggal plan: 24 Feb 2026, 14:22
+
+**Ringkasan**
+Memperbaiki error Ukuran heap melebihi kapasitas block pada import email besar dengan strategi spill/fallback ke subnode agar payload real-world tidak gagal.
+
+**Sumber**
+- Persetujuan user untuk implementasi fix heap overflow - 24 Feb 2026
+
+**Lingkup**
+- src/Emcode.Pst.Libs/Domain/Ltp/PropertyContextWriter.cs
+- (opsional) src/Emcode.Pst.Libs/Domain/Ltp/TableRowWriter.cs
+- tests/Emcode.Pst.Tests/** (test regresi email besar)
+
+**Rencana Prioritas**
+1. Tambah mekanisme fallback build PC: jika heap overflow, rebuild dengan variable-length value disimpan sebagai subnode.
+2. Pastikan state subnode di-reset antar percobaan build untuk menghindari duplikasi.
+3. Tambah/ubah test regresi agar memvalidasi import email besar tidak gagal dengan exception heap overflow.
+4. Verifikasi dengan test terfilter pada skenario import .eml besar lokal.
+
+**Kriteria Selesai**
+- Import .eml besar tidak lagi gagal karena overflow heap single-block.
+- Nilai variabel tetap dapat dibaca ulang melalui mekanisme subnode.
+- Test regresi baru lulus.
+## Plan 63 - 24 Feb 2026, 13:23
+Tanggal plan: 24 Feb 2026, 13:23
+
+**Ringkasan**
+Implementasi kemampuan membuat file PST baru dari nol (tanpa file template) agar bisa langsung dipakai untuk import .eml.
+
+**Sumber**
+- Permintaan user untuk membuat implementasi generate PST dari 0 - 24 Feb 2026
+
+**Lingkup**
+- src/Emcode.Pst.Libs/Application/PstFile.cs
+- src/Emcode.Pst.Libs/Application/PstOpenOptions.cs
+- src/Emcode.Pst.Libs/Infrastructure/Ndb/PstNdbWriter.cs
+- src/Emcode.Pst.Libs/Infrastructure/Ndb/NdbHeaderWriter.cs
+- tests/Emcode.Pst.Tests/PstNdbWriterIntegrationTests.cs
+- (opsional) tests tambahan untuk create-new-pst flow
+
+**Rencana Prioritas**
+1. Tambahkan mode create-if-missing pada opsi buka PST agar alur create eksplisit dan aman.
+2. Implementasikan bootstrap header/root struktur PST minimal yang valid saat file target belum ada.
+3. Ubah PstNdbWriter.Initialize agar mendukung create file baru lalu inisialisasi NDB awal sebelum operasi write.
+4. Integrasikan alur baru di PstFile.Open/OpenAsync untuk path yang belum ada.
+5. Tambahkan integration test untuk verifikasi: path belum ada -> file PST dibuat -> folder/message/import .eml berhasil.
+6. Jalankan test terfilter untuk alur create-new dan alur import existing.
+
+**Kriteria Selesai**
+- API dapat membuka path PST yang belum ada dan membuat file PST valid.
+- File PST baru bisa dipakai untuk CreateFolder, CreateMessage, dan ImportEml.
+- Test integration untuk skenario create-from-zero lulus.
+- Tidak ada path confidential hardcoded.
+## Plan 62 - 24 Feb 2026, 13:06
+Tanggal plan: 24 Feb 2026, 13:06
+
+**Ringkasan**
+Menambahkan kemampuan test import .eml untuk membuat file PST target otomatis saat path target belum ada.
+
+**Sumber**
+- Permintaan user untuk menjalankan test copy data dan otomatis membuat PST target jika belum ada - 24 Feb 2026
+
+**Lingkup**
+- tests/Emcode.Pst.Tests/PstNdbWriterIntegrationTests.cs
+- (opsional) tests/Emcode.Pst.Tests/TestData.cs
+
+**Rencana Prioritas**
+1. Tambahkan mekanisme bootstrap target PST: bila PST_IMPORT_TARGET_PATH belum ada, buat dari template PST lokal.
+2. Tambahkan env var template, misalnya PST_IMPORT_TEMPLATE_PST, agar tidak hardcode path confidential.
+3. Ubah validasi konfigurasi agar gagal jelas bila target tidak ada dan template juga tidak tersedia.
+4. Jalankan test terfilter untuk memastikan alur create-target + import berjalan.
+
+**Kriteria Selesai**
+- Saat target belum ada, test membuat file target PST otomatis dari template valid.
+- Import tree .eml tetap berjalan dan struktur folder terjaga.
+- Tidak ada path confidential hardcoded di source test.
+## Plan 61 - 24 Feb 2026, 12:49
+Tanggal plan: 24 Feb 2026, 12:49
+
+**Ringkasan**
+Menyesuaikan test import .eml agar path sumber dan target PST dibaca dari environment variable sehingga data confidential tidak hardcoded dan aman untuk commit.
+
+**Sumber**
+- Permintaan user untuk ubah test agar aman dari data confidential - 24 Feb 2026
+
+**Lingkup**
+- tests/Emcode.Pst.Tests/PstNdbWriterIntegrationTests.cs
+- (opsional jika diperlukan) tests/Emcode.Pst.Tests/PstWriteTests.cs
+
+**Rencana Prioritas**
+1. Tambahkan pembacaan environment variable untuk source folder .eml dan path target .pst pada integration test.
+2. Terapkan mekanisme skip test bila environment variable tidak tersedia (agar CI/public repo tetap aman).
+3. Pastikan tidak ada path confidential hardcoded di source test.
+4. Jalankan test terkait untuk verifikasi perilaku baru.
+
+**Kriteria Selesai**
+- Test dapat dijalankan lokal dengan mengisi environment variable.
+- Test tidak menyimpan path/folder confidential di code yang di-commit.
+- Saat env var tidak diset, test ter-skip dengan pesan yang jelas.
 ## Plan 60 — 24 Feb 2026, 11:12
 Tanggal plan: 24 Feb 2026, 11:12
 
@@ -1676,6 +2018,11 @@ Menyusun rencana dua tahap implementasi read dan write PST.
 
 **Kriteria Selesai**
 - Rencana dua tahap terdokumentasi.
+
+
+
+
+
 
 
 

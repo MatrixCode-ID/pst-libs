@@ -53,6 +53,38 @@ internal sealed class NdbBlockWriter
     }
 
     /// <summary>
+    /// Menulis page metadata berukuran 512 byte dengan PAGETRAILER terinisialisasi.
+    /// </summary>
+    /// <param name="page">Buffer page 512 byte.</param>
+    /// <param name="pageType">Nilai ptype page.</param>
+    /// <returns>Metadata alokasi page.</returns>
+    public NdbBlockAllocation WritePage(ReadOnlySpan<byte> page, byte pageType)
+    {
+        if (page.Length != _core.PageSize)
+        {
+            throw new ArgumentOutOfRangeException(nameof(page), "Ukuran page harus 512 byte.");
+        }
+
+        var allocation = _core.AllocatePage();
+        var buffer = page.ToArray();
+        var trailerSize = _core.BlockTrailerSize;
+        var trailerOffset = buffer.Length - trailerSize;
+        var crc = NdbIntegrity.ComputeCrc(0, buffer.AsSpan(0, trailerOffset));
+        var signature = NdbIntegrity.ComputeSignature(allocation.Ib, allocation.Bid);
+        NdbIntegrity.WritePageTrailer(
+            buffer.AsSpan(trailerOffset, trailerSize),
+            ResolveFormat(),
+            pageType,
+            crc,
+            signature,
+            allocation.Bid);
+
+        _stream.Seek((long)allocation.Ib, SeekOrigin.Begin);
+        _stream.Write(buffer, 0, buffer.Length);
+        return allocation;
+    }
+
+    /// <summary>
     /// Menulis data ke block eksternal secara asynchronous.
     /// </summary>
     /// <param name="data">Data yang akan ditulis.</param>
@@ -81,31 +113,37 @@ internal sealed class NdbBlockWriter
             throw new ArgumentOutOfRangeException(nameof(data), "Data block tidak boleh kosong.");
         }
 
-        if (data.Length > _core.BlockSize)
+        if (data.Length > _core.MaxBlockDataSize)
         {
-            throw new ArgumentOutOfRangeException(nameof(data), "Data melebihi ukuran block.");
+            throw new ArgumentOutOfRangeException(nameof(data), "Data melebihi kapasitas payload block.");
         }
 
         var allocation = isInternal
             ? _core.AllocateInternalBlock((ushort)data.Length)
             : _core.AllocateExternalBlock((ushort)data.Length);
 
-        _stream.Seek((long)allocation.Ib, SeekOrigin.Begin);
+        var format = ResolveFormat();
+        var trailerSize = _core.BlockTrailerSize;
+        var blockBuffer = new byte[allocation.BlockSize];
+        data.CopyTo(blockBuffer.AsSpan(0, data.Length));
         if (!isInternal && encode)
         {
-            var encoded = data.ToArray();
-            NdbCrypt.Encode(_cryptMethod, encoded);
-            _stream.Write(encoded);
+            NdbCrypt.Encode(_cryptMethod, blockBuffer.AsSpan(0, data.Length));
         }
-        else
-        {
-            _stream.Write(data);
-        }
-        var padding = allocation.BlockSize - data.Length;
-        if (padding > 0)
-        {
-            _stream.Write(new byte[padding]);
-        }
+
+        var signature = NdbIntegrity.ComputeSignature(allocation.Ib, allocation.Bid);
+        var crc = NdbIntegrity.ComputeCrc(0, data);
+        var trailerOffset = allocation.BlockSize - trailerSize;
+        NdbIntegrity.WriteBlockTrailer(
+            blockBuffer.AsSpan(trailerOffset, trailerSize),
+            format,
+            (ushort)data.Length,
+            crc,
+            signature,
+            allocation.Bid);
+
+        _stream.Seek((long)allocation.Ib, SeekOrigin.Begin);
+        _stream.Write(blockBuffer, 0, blockBuffer.Length);
 
         return allocation;
     }
@@ -119,32 +157,43 @@ internal sealed class NdbBlockWriter
             throw new ArgumentOutOfRangeException(nameof(data), "Data block tidak boleh kosong.");
         }
 
-        if (data.Length > _core.BlockSize)
+        if (data.Length > _core.MaxBlockDataSize)
         {
-            throw new ArgumentOutOfRangeException(nameof(data), "Data melebihi ukuran block.");
+            throw new ArgumentOutOfRangeException(nameof(data), "Data melebihi kapasitas payload block.");
         }
 
         var allocation = isInternal
             ? _core.AllocateInternalBlock((ushort)data.Length)
             : _core.AllocateExternalBlock((ushort)data.Length);
 
-        _stream.Seek((long)allocation.Ib, SeekOrigin.Begin);
+        var format = ResolveFormat();
+        var trailerSize = _core.BlockTrailerSize;
+        var blockBuffer = new byte[allocation.BlockSize];
+        data.Span.CopyTo(blockBuffer.AsSpan(0, data.Length));
         if (!isInternal && encode)
         {
-            var encoded = data.ToArray();
-            NdbCrypt.Encode(_cryptMethod, encoded);
-            await _stream.WriteAsync(encoded, cancellationToken).ConfigureAwait(false);
-        }
-        else
-        {
-            await _stream.WriteAsync(data, cancellationToken).ConfigureAwait(false);
-        }
-        var padding = allocation.BlockSize - data.Length;
-        if (padding > 0)
-        {
-            await _stream.WriteAsync(new byte[padding], cancellationToken).ConfigureAwait(false);
+            NdbCrypt.Encode(_cryptMethod, blockBuffer.AsSpan(0, data.Length));
         }
 
+        var signature = NdbIntegrity.ComputeSignature(allocation.Ib, allocation.Bid);
+        var crc = NdbIntegrity.ComputeCrc(0, data.Span);
+        var trailerOffset = allocation.BlockSize - trailerSize;
+        NdbIntegrity.WriteBlockTrailer(
+            blockBuffer.AsSpan(trailerOffset, trailerSize),
+            format,
+            (ushort)data.Length,
+            crc,
+            signature,
+            allocation.Bid);
+
+        _stream.Seek((long)allocation.Ib, SeekOrigin.Begin);
+        await _stream.WriteAsync(blockBuffer, cancellationToken).ConfigureAwait(false);
+
         return allocation;
+    }
+
+    private PstFormat ResolveFormat()
+    {
+        return _core.BlockSize == 8192 ? PstFormat.Unicode : PstFormat.Ansi;
     }
 }

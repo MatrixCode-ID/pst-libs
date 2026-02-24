@@ -94,19 +94,26 @@ Jika ada permintaan perubahan code (kecuali commit):
 
 Berlaku saat user meminta commit.
 
-- WAJIB tanya user tipe kenaikan versi: `major`, `minor`, atau `build`
-- Format versi WAJIB: `XX1.XX2.XX3`
-  - `XX1` = Major update
-  - `XX2` = Minor update
-  - `XX3` = Build update
-- Aturan increment versi:
-  - `major` → naikkan `XX1` +1, lalu reset `XX2` = 0 dan `XX3` = 0
-  - `minor` → naikkan `XX2` +1, lalu reset `XX3` = 0
-  - `build` → naikkan `XX3` +1
-- Setiap commit WAJIB:
-  - Update versi package di file project terkait (contoh: `.csproj`)
-  - Update [ChangeLogs.md](ChangeLogs.md) sesuai perubahan versi dan ringkasan perubahan
+- Jika commit di branch `main`:
+  - WAJIB tanya user tipe kenaikan versi: `major`, `minor`, atau `build`
+  - Format versi WAJIB: `XX1.XX2.XX3`
+    - `XX1` = Major update
+    - `XX2` = Minor update
+    - `XX3` = Build update
+  - Aturan increment versi:
+    - `major` → naikkan `XX1` +1, lalu reset `XX2` = 0 dan `XX3` = 0
+    - `minor` → naikkan `XX2` +1, lalu reset `XX3` = 0
+    - `build` → naikkan `XX3` +1
+  - WAJIB update versi package di file project terkait (contoh: `.csproj`)
+  - WAJIB update [ChangeLogs.md](ChangeLogs.md) sesuai perubahan versi dan ringkasan perubahan
   - Baru lanjut proses commit setelah dua update di atas selesai
+- Jika commit di branch selain `main`:
+  - TIDAK WAJIB update versi package
+  - TIDAK WAJIB update [ChangeLogs.md](ChangeLogs.md)
+  - Commit dapat langsung dilakukan sesuai instruksi user
+- Saat merge/perubahan akan masuk ke branch `main`:
+  - WAJIB lakukan kenaikan versi sesuai aturan di atas
+  - WAJIB catat perubahan pada [ChangeLogs.md](ChangeLogs.md)
 
 ### 7. AUDIT RULE REFERENCE
 
