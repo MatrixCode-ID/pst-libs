@@ -1,6 +1,6 @@
 <script setup>
 import { computed } from "vue";
-import { namespaces } from "../data/docs";
+import { apiNamespaces } from "../data/apiObjects";
 
 const props = defineProps({
   name: {
@@ -10,20 +10,21 @@ const props = defineProps({
 });
 
 const namespaceName = computed(() => decodeURIComponent(props.name));
-const namespaceData = computed(() => namespaces.find((x) => x.id === namespaceName.value));
+const namespaceData = computed(() => apiNamespaces.find((x) => x.id === namespaceName.value));
 </script>
 
 <template>
   <section v-if="namespaceData">
     <h2>{{ namespaceData.id }}</h2>
-    <p>{{ namespaceData.description }}</p>
+    <p>Namespace API publik.</p>
     <h3>Types</h3>
     <ul>
-      <li v-for="type in namespaceData.types" :key="type">{{ type }}</li>
+      <li v-for="type in namespaceData.types" :key="type">
+        <RouterLink :to="`/api/type/${encodeURIComponent(namespaceData.id)}/${encodeURIComponent(type)}`">
+          {{ type }}
+        </RouterLink>
+      </li>
     </ul>
-    <p>
-      Catatan: Migrasi ke Vue sedang tahap awal. Halaman detail type akan dipindahkan bertahap dari versi HTML legacy.
-    </p>
   </section>
   <section v-else>
     <h2>Namespace tidak ditemukan</h2>

@@ -1,13 +1,13 @@
 <script setup>
-import { namespaces } from "../data/docs";
+import { apiNamespaces } from "../data/apiObjects";
 </script>
 
 <template>
   <section>
     <h2>Namespaces</h2>
-    <div v-for="ns in namespaces" :key="ns.id" class="ns-card">
+    <div v-for="ns in apiNamespaces" :key="ns.id" class="ns-card">
       <h3>{{ ns.id }}</h3>
-      <p>{{ ns.description }}</p>
+      <p>Namespace API publik.</p>
       <RouterLink :to="`/api/namespace/${encodeURIComponent(ns.id)}`">Lihat detail</RouterLink>
     </div>
   </section>

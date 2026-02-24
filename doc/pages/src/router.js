@@ -11,6 +11,7 @@ import HelpFaqPage from "./views/HelpFaqPage.vue";
 import ApiOverviewPage from "./views/ApiOverviewPage.vue";
 import ApiNamespacesPage from "./views/ApiNamespacesPage.vue";
 import ApiNamespacePage from "./views/ApiNamespacePage.vue";
+import ApiTypeDetailPage from "./views/ApiTypeDetailPage.vue";
 
 const router = createRouter({
   history: createWebHashHistory(),
@@ -26,7 +27,8 @@ const router = createRouter({
     { path: "/help/faq", component: HelpFaqPage },
     { path: "/api", component: ApiOverviewPage },
     { path: "/api/namespaces", component: ApiNamespacesPage },
-    { path: "/api/namespace/:name", component: ApiNamespacePage, props: true }
+    { path: "/api/namespace/:name", component: ApiNamespacePage, props: true },
+    { path: "/api/type/:namespace/:type", component: ApiTypeDetailPage, props: true }
   ]
 });
 

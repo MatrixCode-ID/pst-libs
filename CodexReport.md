@@ -1,3 +1,111 @@
+## Laporan 159 — 24 Feb 2026, 11:12
+Tanggal laporan: 24 Feb 2026, 11:12
+
+**Ringkasan Pertanyaan**
+Meminta lanjut hapus/arsip file `*.html` legacy setelah migrasi Vue.
+
+**Statement Jawaban**
+Semua HTML legacy docs sudah dipindahkan ke folder arsip.
+
+Detail:
+- File yang diarsipkan: 36 file HTML legacy.
+- Lokasi arsip baru: `doc/legacy/pages-html/` (struktur path dipertahankan).
+- Source docs aktif `doc/pages` sekarang menyisakan:
+  - `index.html` (entry Vue SPA)
+  - (lokal build output) `dist/index.html` bila ada hasil build lokal.
+
+Cakupan arsip meliputi:
+- `doc/pages/api/**/*.html`
+- `doc/pages/help/**/*.html`
+- `doc/pages/toc.html`
+
+**File Terkait**
+- doc/legacy/pages-html/**
+- doc/pages/api/**/*.html (dipindahkan)
+- doc/pages/help/**/*.html (dipindahkan)
+- doc/pages/toc.html (dipindahkan)
+- RefactorPlan.md
+- CodexReport.md
+
+## Laporan 158 — 24 Feb 2026, 11:11
+Tanggal laporan: 24 Feb 2026, 11:11
+
+**Ringkasan Pertanyaan**
+Meminta lanjut fase migrasi detail API object ke Vue secara penuh.
+
+**Statement Jawaban**
+Fase ini diselesaikan dengan mengalihkan sumber data API dari HTML legacy ke source C# langsung.
+
+Perubahan utama:
+- Generator data API diubah total:
+  - `doc/pages/scripts/generate-api-data.mjs`
+  - sekarang parse `src/Emcode.Pst.Libs/**/*.cs` untuk mendapatkan:
+    - namespace,
+    - type publik,
+    - summary/signature,
+    - constructors/properties/methods/events,
+    - fields enum.
+- Dataset output:
+  - `doc/pages/src/data/apiObjects.js`
+  - berisi `apiObjects` + `apiNamespaces`.
+- Komponen Vue dihubungkan ke dataset baru:
+  - `ApiNamespacesPage.vue` dan `ApiNamespacePage.vue` memakai `apiNamespaces`.
+  - `ApiTypeDetailPage.vue` merender detail object API penuh.
+- Build script tetap menjalankan generator sebelum Vite build.
+
+Verifikasi:
+- `npm run build` sukses.
+- Generator menghasilkan 23 object API dari source code C#.
+
+**File Terkait**
+- doc/pages/scripts/generate-api-data.mjs
+- doc/pages/src/data/apiObjects.js
+- doc/pages/src/views/ApiNamespacesPage.vue
+- doc/pages/src/views/ApiNamespacePage.vue
+- doc/pages/src/views/ApiTypeDetailPage.vue
+- doc/pages/src/router.js
+- doc/pages/src/styles.css
+- doc/pages/package.json
+- RefactorPlan.md
+- CodexReport.md
+
+## Laporan 157 — 24 Feb 2026, 11:08
+Tanggal laporan: 24 Feb 2026, 11:08
+
+**Ringkasan Pertanyaan**
+Meminta lanjut fase berikutnya: migrasi konten detail API object yang masih legacy ke komponen Vue secara penuh.
+
+**Statement Jawaban**
+Fase migrasi detail API ke Vue sudah dieksekusi.
+
+Perubahan utama:
+- Menambahkan generator data API dari halaman legacy:
+  - `doc/pages/scripts/generate-api-data.mjs`
+  - menghasilkan `doc/pages/src/data/apiObjects.js` (22 object API).
+- Menambahkan route detail API object di Vue:
+  - `/api/type/:namespace/:type`
+- Memperbarui halaman namespace agar setiap type menjadi link ke halaman detail Vue.
+- Menambahkan komponen detail object:
+  - `doc/pages/src/views/ApiTypeDetailPage.vue`
+  - menampilkan `Definition`, `Constructors`, `Properties`, `Methods`, `Events`, serta `Fields` untuk enum.
+- Menambahkan style tabel untuk readability halaman detail API.
+- Mengintegrasikan generator ke script build:
+  - `npm run build` sekarang menjalankan `npm run generate:api-data` sebelum `vite build`.
+
+Verifikasi:
+- Build docs Vue berhasil (`npm run build` sukses).
+
+**File Terkait**
+- doc/pages/scripts/generate-api-data.mjs
+- doc/pages/src/data/apiObjects.js
+- doc/pages/src/router.js
+- doc/pages/src/views/ApiNamespacePage.vue
+- doc/pages/src/views/ApiTypeDetailPage.vue
+- doc/pages/src/styles.css
+- doc/pages/package.json
+- RefactorPlan.md
+- CodexReport.md
+
 ## Laporan 156 — 24 Feb 2026, 10:59
 Tanggal laporan: 24 Feb 2026, 10:59
 

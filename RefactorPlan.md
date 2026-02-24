@@ -1,3 +1,95 @@
+## Plan 60 — 24 Feb 2026, 11:12
+Tanggal plan: 24 Feb 2026, 11:12
+
+**Ringkasan**
+Arsip seluruh halaman HTML legacy docs setelah migrasi Vue agar source aktif `doc/pages` fokus pada SPA + source komponen.
+
+**Sumber**
+- Perintah user untuk lanjut hapus/arsip HTML legacy — 24 Feb 2026
+
+**Lingkup**
+- doc/pages/api/**/*.html
+- doc/pages/help/**/*.html
+- doc/pages/toc.html
+- doc/legacy/pages-html/**
+
+**Rencana Prioritas**
+1. Identifikasi file HTML legacy di `doc/pages` (kecuali entry Vue `doc/pages/index.html`).
+2. Pindahkan HTML legacy ke folder arsip dengan struktur path tetap.
+3. Pastikan tidak ada halaman legacy tersisa di source docs aktif selain entry Vue.
+
+**Kriteria Selesai**
+- HTML legacy sudah diarsipkan di `doc/legacy/pages-html/`.
+- `doc/pages` source aktif tidak lagi bergantung pada HTML legacy.
+- Struktur arsip tetap mudah ditelusuri untuk kebutuhan rollback/reference.
+
+## Plan 59 — 24 Feb 2026, 11:11
+Tanggal plan: 24 Feb 2026, 11:11
+
+**Ringkasan**
+Menyelesaikan migrasi detail API object ke Vue secara penuh dengan menghapus dependensi data dari HTML legacy dan beralih ke parsing langsung source C#.
+
+**Sumber**
+- Permintaan lanjutan user untuk fase migrasi detail API — 24 Feb 2026
+
+**Lingkup**
+- doc/pages/scripts/generate-api-data.mjs
+- doc/pages/src/data/apiObjects.js
+- doc/pages/src/views/ApiNamespacesPage.vue
+- doc/pages/src/views/ApiNamespacePage.vue
+- doc/pages/src/views/ApiTypeDetailPage.vue
+- doc/pages/src/router.js
+- doc/pages/src/styles.css
+- doc/pages/package.json
+
+**Rencana Prioritas**
+1. Ganti generator data API agar sumber data berasal dari `src/Emcode.Pst.Libs/**/*.cs`.
+2. Generate dataset:
+   - `apiObjects` (detail type/member),
+   - `apiNamespaces` (namespace + list type).
+3. Sambungkan komponen namespace/detail ke dataset hasil parsing source code.
+4. Pastikan build menjalankan generator otomatis sebelum `vite build`.
+5. Validasi build dan rendering detail type API.
+
+**Kriteria Selesai**
+- Detail API object dirender penuh oleh komponen Vue dari data source C#, bukan dari HTML legacy.
+- Route detail `/api/type/:namespace/:type` aktif untuk seluruh type publik yang diparse.
+- Build docs Vue sukses.
+
+## Plan 58 — 24 Feb 2026, 11:08
+Tanggal plan: 24 Feb 2026, 11:08
+
+**Ringkasan**
+Eksekusi fase lanjutan migrasi API: memindahkan detail object API (legacy HTML) ke komponen Vue penuh berbasis dataset terstruktur.
+
+**Sumber**
+- Perintah user untuk lanjut fase migrasi API detail — 24 Feb 2026
+
+**Lingkup**
+- doc/pages/scripts/generate-api-data.mjs
+- doc/pages/src/data/apiObjects.js
+- doc/pages/src/router.js
+- doc/pages/src/views/ApiNamespacePage.vue
+- doc/pages/src/views/ApiTypeDetailPage.vue
+- doc/pages/src/styles.css
+- doc/pages/package.json
+
+**Rencana Prioritas**
+1. Buat generator yang membaca halaman API legacy dan menghasilkan dataset `apiObjects` terstruktur.
+2. Tambahkan route detail type API pada Vue router (`/api/type/:namespace/:type`).
+3. Perbarui halaman namespace agar type list menuju halaman detail Vue.
+4. Implementasi komponen detail object API yang merender:
+   - `Definition`
+   - `Constructors/Properties/Methods/Events`
+   - `Fields` untuk enum
+5. Integrasikan generator ke pipeline build frontend (`npm run build`).
+6. Verifikasi build sukses.
+
+**Kriteria Selesai**
+- Semua type API (22 object) dapat dibuka melalui halaman detail Vue.
+- Konten detail API dirender dari dataset Vue, bukan bergantung pada navigasi legacy HTML.
+- Build docs Vue sukses tanpa error.
+
 ## Plan 57 — 24 Feb 2026, 10:59
 Tanggal plan: 24 Feb 2026, 10:59
 

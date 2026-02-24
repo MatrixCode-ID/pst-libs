@@ -24,6 +24,18 @@ Format mengikuti prinsip [Keep a Changelog](https://keepachangelog.com/en/1.1.0/
 ### Security
 - Belum ada.
 
+## [1.0.9] - 2026-02-24
+
+### Added
+- Generator data API docs berbasis parsing source C# (`doc/pages/scripts/generate-api-data.mjs`) beserta dataset `doc/pages/src/data/apiObjects.js`.
+- Halaman detail object API berbasis Vue (`doc/pages/src/views/ApiTypeDetailPage.vue`) dan route detail type.
+
+### Changed
+- Migrasi penuh docs API ke SPA Vue dengan namespace/type rendering dari source code.
+- Halaman HTML legacy docs dipindahkan ke arsip `doc/legacy/pages-html/`.
+- Perapihan direktori kosong sisa legacy di `doc/pages/api` dan `doc/pages/help`.
+- Kenaikan versi build package `Emcode.Pst.Libs` dari `1.0.8` ke `1.0.9`.
+
 ## [1.0.8] - 2026-02-24
 
 ### Added

@@ -136,6 +136,18 @@ pre {
   overflow-x: auto;
 }
 
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 14px;
+}
+
+th, td {
+  border: 1px solid var(--doc-border);
+  padding: 8px;
+  vertical-align: top;
+}
+
 a {
   color: var(--doc-link);
 }
