@@ -29,6 +29,16 @@ public sealed class PstFolder
     public string Name { get; internal set; }
 
     /// <summary>
+    /// Komentar folder jika tersedia.
+    /// </summary>
+    public string? Comment { get; internal set; }
+
+    /// <summary>
+    /// Deskripsi folder/store jika tersedia.
+    /// </summary>
+    public string? Description { get; internal set; }
+
+    /// <summary>
     /// Subfolder di bawah folder ini.
     /// </summary>
     public IReadOnlyList<PstFolder> SubFolders { get; internal set; }

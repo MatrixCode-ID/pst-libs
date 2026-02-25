@@ -1,8 +1,10 @@
 using System;
 using System.IO;
 using System.Linq;
+using System.Security.Cryptography;
 using System.Text;
 using System.Threading;
+using System.Threading.Tasks;
 using Emcode.Pst.Application;
 using Emcode.Pst.Domain;
 using Emcode.Pst.Infrastructure.Ndb;
@@ -18,6 +20,13 @@ public sealed class PstNdbWriterIntegrationTests
     private const string ImportEnabledEnvName = "PST_IMPORT_ENABLED";
     private const string SourceDirectoryEnvName = "PST_IMPORT_SOURCE_DIR";
     private const string TargetPstPathEnvName = "PST_IMPORT_TARGET_PATH";
+    private const string BaselineAttachmentDocxName = "test-doc.docx";
+    private const string BaselineAttachmentPdfName = "test-doc.pdf";
+    private const string AppendedFolderName = "appended-folder";
+    private const string AppendedSubject = "Appended from code";
+    private const string AppendedBody = "This text appended from benchmark test.";
+    private const string AppendedTo = "email3@contoso.com";
+    private static readonly object ArtifactOutputSync = new();
 
     /// <summary>
     /// Memastikan create folder + message dapat dipersist dan terbaca ulang.
@@ -125,6 +134,106 @@ public sealed class PstNdbWriterIntegrationTests
     }
 
     /// <summary>
+    /// Memastikan Save() dapat flush perubahan ke disk sebelum Dispose dipanggil.
+    /// </summary>
+    [Fact]
+    public void Save_ShouldPersistChangesBeforeDispose()
+    {
+        var temp = Path.Combine(Path.GetTempPath(), $"pst-save-{Guid.NewGuid():N}.pst");
+        if (File.Exists(temp))
+        {
+            File.Delete(temp);
+        }
+
+        PstFile? writable = null;
+        try
+        {
+            var bootstrapper = new PstNdbWriter();
+            bootstrapper.EnsureFileInitialized(temp, new PstOpenOptions { ReadOnly = false });
+
+            var headerReader = new NdbHeaderReader();
+            NdbHeader baselineHeader;
+            using (var baselineStream = new FileStream(temp, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
+            {
+                baselineHeader = headerReader.Read(baselineStream);
+            }
+
+            writable = PstFile.Open(
+                temp,
+                new PstOpenOptions { ReadOnly = false, ValidateChecksums = false },
+                writer: new PstNdbWriter());
+
+            writable.CreateFolder($"SaveFolder-{Guid.NewGuid():N}");
+            writable.Save();
+
+            NdbHeader updatedHeader;
+            using (var updatedStream = new FileStream(temp, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
+            {
+                updatedHeader = headerReader.Read(updatedStream);
+            }
+
+            Assert.True(
+                updatedHeader.Counters.NidCounters[(int)NidType.NormalFolder] >
+                baselineHeader.Counters.NidCounters[(int)NidType.NormalFolder]);
+        }
+        finally
+        {
+            writable?.Dispose();
+            DeleteFileIfExists(temp);
+        }
+    }
+
+    /// <summary>
+    /// Memastikan SaveAsync() dapat flush perubahan ke disk sebelum Dispose dipanggil.
+    /// </summary>
+    [Fact]
+    public async Task SaveAsync_ShouldPersistChangesBeforeDispose()
+    {
+        var temp = Path.Combine(Path.GetTempPath(), $"pst-save-async-{Guid.NewGuid():N}.pst");
+        if (File.Exists(temp))
+        {
+            File.Delete(temp);
+        }
+
+        PstFile? writable = null;
+        try
+        {
+            var bootstrapper = new PstNdbWriter();
+            bootstrapper.EnsureFileInitialized(temp, new PstOpenOptions { ReadOnly = false });
+
+            var headerReader = new NdbHeaderReader();
+            NdbHeader baselineHeader;
+            using (var baselineStream = new FileStream(temp, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
+            {
+                baselineHeader = headerReader.Read(baselineStream);
+            }
+
+            writable = PstFile.Open(
+                temp,
+                new PstOpenOptions { ReadOnly = false, ValidateChecksums = false },
+                writer: new PstNdbWriter());
+
+            writable.CreateFolder($"SaveAsyncFolder-{Guid.NewGuid():N}");
+            await writable.SaveAsync(CancellationToken.None);
+
+            NdbHeader updatedHeader;
+            using (var updatedStream = new FileStream(temp, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
+            {
+                updatedHeader = headerReader.Read(updatedStream);
+            }
+
+            Assert.True(
+                updatedHeader.Counters.NidCounters[(int)NidType.NormalFolder] >
+                baselineHeader.Counters.NidCounters[(int)NidType.NormalFolder]);
+        }
+        finally
+        {
+            writable?.Dispose();
+            DeleteFileIfExists(temp);
+        }
+    }
+
+    /// <summary>
     /// Memastikan PST baru dapat dibuat dari nol saat file target belum ada.
     /// </summary>
     [Fact]
@@ -172,6 +281,282 @@ public sealed class PstNdbWriterIntegrationTests
     }
 
     /// <summary>
+    /// Memastikan file hasil write dapat dibuka ulang dengan validasi checksum aktif.
+    /// </summary>
+    [Fact]
+    public void CreateIfMissing_Result_ShouldOpenWithChecksumValidation()
+    {
+        var temp = Path.Combine(Path.GetTempPath(), $"pst-checksum-{Guid.NewGuid():N}.pst");
+        if (File.Exists(temp))
+        {
+            File.Delete(temp);
+        }
+
+        try
+        {
+            using (var pst = PstFile.Open(
+                       temp,
+                       new PstOpenOptions { ReadOnly = false, ValidateChecksums = false, CreateIfMissing = true },
+                       writer: new PstNdbWriter()))
+            {
+                var folder = pst.CreateFolder("ChecksumFolder");
+                pst.CreateMessage(folder, new PstMessageDraft
+                {
+                    Subject = "Checksum Subject",
+                    Body = "Checksum Body",
+                    FromName = "Tester",
+                    FromAddress = "tester@example.com"
+                });
+            }
+
+            using var reopened = PstFile.Open(temp, new PstOpenOptions { ReadOnly = true, ValidateChecksums = true });
+            Assert.Contains(reopened.Folders, folder => folder.Name == "ChecksumFolder");
+        }
+        finally
+        {
+            DeleteFileIfExists(temp);
+        }
+    }
+
+    /// <summary>
+    /// Memastikan test permanen dapat menghasilkan `artifacts/output.pst` untuk pembanding terhadap `doc/Empty.pst`.
+    /// </summary>
+    [Fact]
+    public void CreateBenchmarkOutputPst_ShouldWriteArtifactsOutputAndProvideBaselineComparison()
+    {
+        lock (ArtifactOutputSync)
+        {
+            var outputPath = ResolveArtifactsOutputPath();
+            var baselinePath = TestData.EmptyBaselinePath;
+            var outputDirectory = Path.GetDirectoryName(outputPath);
+            Assert.False(string.IsNullOrWhiteSpace(outputDirectory), "Direktori artifacts tidak valid.");
+            Directory.CreateDirectory(outputDirectory!);
+            if (File.Exists(outputPath))
+            {
+                File.Delete(outputPath);
+            }
+
+            using var baseline = PstFile.Open(baselinePath, new PstOpenOptions { ReadOnly = true, ValidateChecksums = true });
+            using var writable = PstFile.Open(
+                       outputPath,
+                       new PstOpenOptions { ReadOnly = false, ValidateChecksums = false, CreateIfMissing = true },
+                       writer: new PstNdbWriter());
+
+            foreach (var folder in baseline.Folders)
+            {   
+                var newWriteableFolder = writable.CreateFolder(folder.Name);
+                newWriteableFolder.Comment = folder.Comment;
+                newWriteableFolder.Description = folder.Description;
+                newWriteableFolder.Name = folder.Name;
+            }
+
+            var baselineStore = ResolveBenchmarkStoreFolder(baseline);
+            writable.UpdateStoreProperties(new PstStorePropertiesDraft
+            {
+                DisplayName = baselineStore.Name,
+                Description = baselineStore.Description,
+                Comment = baselineStore.Comment
+            });
+
+            var parent = writable.Folders.FirstOrDefault(folder =>
+                             string.Equals(folder.Name, baselineStore.Name, StringComparison.OrdinalIgnoreCase))
+                         ?? writable.Folders.FirstOrDefault(folder =>
+                             string.Equals(folder.Name, "Top of Outlook data file", StringComparison.OrdinalIgnoreCase))
+                         ?? writable.RootFolder
+                         ?? writable.Folders.First();
+            CopyFolderTreeAndMessagesFromBaseline(baselineStore, parent, writable);
+
+            using var baselineReopened = PstFile.Open(baselinePath, new PstOpenOptions { ReadOnly = true, ValidateChecksums = true });
+            using (var reopened = PstFile.Open(outputPath, new PstOpenOptions { ReadOnly = true, ValidateChecksums = true }))
+            {
+                Assert.True(reopened.Folders.Count > 0);
+                AssertBenchmarkContentMatchesBaseline(baselineReopened, reopened);
+            }
+
+            var generatedHash = Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(outputPath)));
+            var baselineHash = Convert.ToHexString(SHA256.HashData(File.ReadAllBytes(baselinePath)));
+            Assert.False(string.IsNullOrWhiteSpace(generatedHash));
+            Assert.False(string.IsNullOrWhiteSpace(baselineHash));
+            Assert.True(File.Exists(outputPath));
+            Assert.True(new FileInfo(outputPath).Length > 0);
+            Assert.Equal(baselineHash, generatedHash);
+        }
+    }
+
+    /// <summary>
+    /// Memastikan benchmark append dapat membuat `artifacts/output2.pst` dari baseline lalu menambah folder/message baru.
+    /// </summary>
+    [Fact]
+    public void CreateBenchmarkOutput2Pst_ShouldAppendFolderAndMessageWithAttachment()
+    {
+        lock (ArtifactOutputSync)
+        {
+            var outputPath = ResolveArtifactsOutput2Path();
+            var baselinePath = TestData.EmptyBaselinePath;
+            var outputDirectory = Path.GetDirectoryName(outputPath);
+            Assert.False(string.IsNullOrWhiteSpace(outputDirectory), "Direktori artifacts tidak valid.");
+            Directory.CreateDirectory(outputDirectory!);
+            if (File.Exists(outputPath))
+            {
+                File.Delete(outputPath);
+            }
+
+            File.Copy(baselinePath, outputPath, overwrite: true);
+
+            using (var writable = PstFile.Open(
+                       outputPath,
+                       new PstOpenOptions { ReadOnly = false, ValidateChecksums = false },
+                       writer: new PstNdbWriter()))
+            {
+                var parent = writable.Folders.FirstOrDefault(folder =>
+                                 string.Equals(folder.Name, "empty@contoso.com", StringComparison.OrdinalIgnoreCase))
+                             ?? writable.Folders.FirstOrDefault(folder =>
+                                 string.Equals(folder.Name, "Top of Outlook data file", StringComparison.OrdinalIgnoreCase))
+                             ?? writable.RootFolder
+                             ?? writable.Folders.First();
+                var appendedFolder = writable.CreateFolder(AppendedFolderName, parent);
+                writable.CreateMessage(appendedFolder, new PstMessageDraft
+                {
+                    MessageClass = "IPM.Note",
+                    FromName = "email@contoso.com",
+                    FromAddress = "email@contoso.com",
+                    Subject = AppendedSubject,
+                    HtmlBody = $"<html><body><p>{AppendedBody}</p></body></html>",
+                    Recipients = new[]
+                    {
+                        new PstDraftRecipient
+                        {
+                            RecipientType = PstRecipientType.To,
+                            DisplayName = AppendedTo,
+                            EmailAddress = AppendedTo,
+                            SmtpAddress = AppendedTo
+                        }
+                    },
+                    Attachments = new[]
+                    {
+                        new PstDraftAttachment
+                        {
+                            FileName = BaselineAttachmentPdfName,
+                            LongFileName = BaselineAttachmentPdfName,
+                            ContentType = "application/pdf",
+                            ContentBytes = File.ReadAllBytes(TestData.TestDocPdfPath)
+                        }
+                    }
+                });
+            }
+
+            using var reopened = PstFile.Open(outputPath, new PstOpenOptions { ReadOnly = true, ValidateChecksums = true });
+            var appended = reopened.Folders.FirstOrDefault(folder =>
+                string.Equals(folder.Name, AppendedFolderName, StringComparison.OrdinalIgnoreCase));
+            Assert.NotNull(appended);
+            Assert.Single(appended!.Messages);
+            var message = appended.Messages[0];
+            Assert.Equal(AppendedSubject, message.Subject);
+            var sender = message.SenderEmailAddress ?? message.SenderSmtpAddress ?? message.SenderName;
+            Assert.Equal("email@contoso.com", sender);
+            var toValue = message.Recipients.FirstOrDefault(item => item.RecipientType == (int)PstRecipientType.To)?.SmtpAddress
+                ?? message.Recipients.FirstOrDefault(item => item.RecipientType == (int)PstRecipientType.To)?.EmailAddress
+                ?? message.DisplayTo;
+            Assert.Equal(AppendedTo, toValue);
+            Assert.True(
+                (!string.IsNullOrWhiteSpace(message.Body) && message.Body.Contains(AppendedBody, StringComparison.OrdinalIgnoreCase)) ||
+                (!string.IsNullOrWhiteSpace(message.HtmlBody) && message.HtmlBody.Contains(AppendedBody, StringComparison.OrdinalIgnoreCase)));
+            AssertAttachmentMatchesFixture(message, BaselineAttachmentPdfName, TestData.TestDocPdfPath);
+        }
+    }
+
+    /// <summary>
+    /// Memastikan properti store (name/description/comment) bisa di-set saat membuat PST baru.
+    /// </summary>
+    [Fact]
+    public void CreateIfMissing_WithStoreProperties_ShouldPersistStoreNameDescriptionAndComment()
+    {
+        var temp = Path.Combine(Path.GetTempPath(), $"pst-store-create-{Guid.NewGuid():N}.pst");
+        if (File.Exists(temp))
+        {
+            File.Delete(temp);
+        }
+
+        try
+        {
+            using (var pst = PstFile.Open(
+                       temp,
+                       new PstOpenOptions { ReadOnly = false, ValidateChecksums = false, CreateIfMissing = true },
+                       writer: new PstNdbWriter()))
+            {
+                pst.UpdateStoreProperties(new PstStorePropertiesDraft
+                {
+                    DisplayName = "aan@connusa.com",
+                    Description = "Deskripsi sinkronisasi.",
+                    Comment = "PST untuk sinkronisasi."
+                });
+            }
+
+            using var reopened = PstFile.Open(temp, new PstOpenOptions { ReadOnly = true, ValidateChecksums = false });
+            var storeFolder = reopened.Folders.FirstOrDefault(folder => folder.Name == "aan@connusa.com");
+            Assert.NotNull(storeFolder);
+            Assert.Equal("Deskripsi sinkronisasi.", storeFolder!.Description);
+            Assert.Equal("PST untuk sinkronisasi.", storeFolder!.Comment);
+        }
+        finally
+        {
+            DeleteFileIfExists(temp);
+        }
+    }
+
+    /// <summary>
+    /// Memastikan properti store (name/description/comment) bisa diupdate pada PST existing.
+    /// </summary>
+    [Fact]
+    public void OpenExisting_WithStorePropertiesUpdate_ShouldPersistLatestValues()
+    {
+        var temp = Path.Combine(Path.GetTempPath(), $"pst-store-update-{Guid.NewGuid():N}.pst");
+        if (File.Exists(temp))
+        {
+            File.Delete(temp);
+        }
+
+        try
+        {
+            using (var create = PstFile.Open(
+                       temp,
+                       new PstOpenOptions { ReadOnly = false, ValidateChecksums = false, CreateIfMissing = true },
+                       writer: new PstNdbWriter()))
+            {
+                create.UpdateStoreProperties(new PstStorePropertiesDraft
+                {
+                    DisplayName = "Store Awal",
+                    Description = "Deskripsi awal",
+                    Comment = "Komentar awal"
+                });
+            }
+
+            using (var update = PstFile.Open(
+                       temp,
+                       new PstOpenOptions { ReadOnly = false, ValidateChecksums = false },
+                       writer: new PstNdbWriter()))
+            {
+                update.UpdateStoreProperties(new PstStorePropertiesDraft
+                {
+                    DisplayName = "Store Final",
+                    Description = "Deskripsi final",
+                    Comment = "Komentar final"
+                });
+            }
+
+            using var reopened = PstFile.Open(temp, new PstOpenOptions { ReadOnly = true, ValidateChecksums = false });
+            var storeFolder = reopened.Folders.FirstOrDefault(folder => folder.Name == "Store Final");
+            Assert.NotNull(storeFolder);
+            Assert.Equal("Deskripsi final", storeFolder!.Description);
+            Assert.Equal("Komentar final", storeFolder!.Comment);
+        }
+        finally
+        {
+            DeleteFileIfExists(temp);
+        }
+    }
+
+    /// <summary>
     /// Memastikan bootstrap file PST baru dibangun dari builder spesifikasi tanpa resource template.
     /// </summary>
     [Fact]
@@ -192,11 +577,20 @@ public sealed class PstNdbWriterIntegrationTests
             using var target = File.OpenRead(temp);
             var header = new NdbHeaderReader().Read(target);
             Assert.Equal(PstFormat.Unicode, header.HeaderInfo.Format);
+            Assert.Equal((uint)0x4D53, header.HeaderInfo.ClientSignature);
+            Assert.Equal((ushort)0x0013, header.HeaderInfo.VersionMinor);
+            Assert.Equal(PstCryptMethod.Permute, header.HeaderInfo.CryptMethod);
             Assert.True(header.RootState.IsAMapValid);
             Assert.True(header.BbtRoot.Ib > 0);
             Assert.True(header.NbtRoot.Ib > 0);
             Assert.True(header.BbtRoot.Bid.Raw > 0);
             Assert.True(header.NbtRoot.Bid.Raw > 0);
+
+            using var pst = PstFile.Open(temp, new PstOpenOptions { ReadOnly = true, ValidateChecksums = false });
+            Assert.Contains(pst.Folders, folder => folder.Name == "Root");
+            Assert.Contains(pst.Folders, folder => folder.Name == "Top of Outlook data file");
+            Assert.Contains(pst.Folders, folder => folder.Name == "Search Root");
+            Assert.Contains(pst.Folders, folder => folder.Name == "Deleted Items");
         }
         finally
         {
@@ -492,5 +886,277 @@ public sealed class PstNdbWriterIntegrationTests
                 Thread.Sleep(30);
             }
         }
+    }
+
+    /// <summary>
+    /// Menentukan path output benchmark permanen pada folder artifacts repository.
+    /// </summary>
+    /// <returns>Path absolut `artifacts/output.pst`.</returns>
+    private static string ResolveArtifactsOutputPath()
+    {
+        var baseDir = AppContext.BaseDirectory;
+        var repositoryRoot = Path.GetFullPath(Path.Combine(baseDir, "..", "..", "..", "..", ".."));
+        return Path.Combine(repositoryRoot, "artifacts", "output.pst");
+    }
+
+    /// <summary>
+    /// Menentukan path output benchmark append permanen pada folder artifacts repository.
+    /// </summary>
+    /// <returns>Path absolut `artifacts/output2.pst`.</returns>
+    private static string ResolveArtifactsOutput2Path()
+    {
+        var baseDir = AppContext.BaseDirectory;
+        var repositoryRoot = Path.GetFullPath(Path.Combine(baseDir, "..", "..", "..", "..", ".."));
+        return Path.Combine(repositoryRoot, "artifacts", "output2.pst");
+    }
+
+    /// <summary>
+    /// Menyalin seluruh folder dan message baseline ke PST target secara rekursif.
+    /// </summary>
+    /// <param name="baselineFolder">Folder baseline sumber.</param>
+    /// <param name="targetParent">Folder parent pada PST target.</param>
+    /// <param name="writable">Instance PST target dalam mode tulis.</param>
+    private static void CopyFolderTreeAndMessagesFromBaseline(PstFolder baselineFolder, PstFolder targetParent, PstFile writable)
+    {
+        foreach (var baselineMessage in baselineFolder.Messages)
+        {
+            writable.CreateMessage(targetParent, BuildMessageDraftFromBaseline(baselineMessage));
+        }
+
+        foreach (var baselineChild in baselineFolder.SubFolders)
+        {
+            var targetChild = targetParent.SubFolders.FirstOrDefault(folder =>
+                string.Equals(folder.Name, baselineChild.Name, StringComparison.OrdinalIgnoreCase))
+                ?? writable.CreateFolder(baselineChild.Name, targetParent);
+            CopyFolderTreeAndMessagesFromBaseline(baselineChild, targetChild, writable);
+        }
+    }
+
+    /// <summary>
+    /// Membangun draft message target dari object message baseline.
+    /// </summary>
+    /// <param name="source">Message baseline sumber.</param>
+    /// <returns>Draft message untuk ditulis ke PST target.</returns>
+    private static PstMessageDraft BuildMessageDraftFromBaseline(PstMessage source)
+    {
+        var fromAddress = source.SenderEmailAddress ?? source.SenderSmtpAddress ?? source.SenderName;
+        var recipients = BuildRecipientsFromBaseline(source);
+        var attachments = source.Attachments
+            .Select(attachment => new PstDraftAttachment
+            {
+                FileName = attachment.FileName ?? attachment.LongFileName,
+                LongFileName = attachment.LongFileName ?? attachment.FileName,
+                ContentType = attachment.MimeTag,
+                ContentId = attachment.ContentId,
+                IsInline = !string.IsNullOrWhiteSpace(attachment.ContentId),
+                ContentBytes = attachment.ReadContentBytes()
+            })
+            .ToArray();
+
+        var fallbackBody = !string.IsNullOrWhiteSpace(source.HtmlBody) ? null : source.Body;
+        var isDraft = source.MessageFlags.HasValue && (source.MessageFlags.Value & 0x0008) != 0;
+
+        return new PstMessageDraft
+        {
+            MessageClass = source.MessageClass,
+            FromName = source.SenderName ?? fromAddress,
+            FromAddress = fromAddress,
+            Subject = source.Subject,
+            Body = fallbackBody,
+            HtmlBody = source.HtmlBody,
+            MessageId = source.InternetMessageId,
+            SentTime = source.DeliveryTime,
+            ClientSubmitTime = source.ClientSubmitTime,
+            LastModificationTime = source.LastModificationTime,
+            MessageFlags = source.MessageFlags,
+            IsDraft = isDraft,
+            ReadReceiptRequested = source.ReadReceiptRequested,
+            DeliveryReceiptRequested = source.DeliveryReceiptRequested,
+            Importance = source.Importance,
+            Priority = source.Priority,
+            Sensitivity = source.Sensitivity,
+            TransportMessageHeaders = source.TransportMessageHeaders,
+            ConversationTopic = source.ConversationTopic,
+            ConversationIndex = source.ConversationIndex?.ToArray(),
+            Recipients = recipients,
+            Attachments = attachments
+        };
+    }
+
+    /// <summary>
+    /// Membangun daftar penerima draft dari data baseline.
+    /// </summary>
+    /// <param name="source">Message baseline sumber.</param>
+    /// <returns>Daftar penerima untuk draft message.</returns>
+    private static PstDraftRecipient[] BuildRecipientsFromBaseline(PstMessage source)
+    {
+        if (source.Recipients.Count > 0)
+        {
+            return source.Recipients
+                .Select(recipient => new PstDraftRecipient
+                {
+                    RecipientType = ConvertRecipientType(recipient.RecipientType),
+                    DisplayName = recipient.DisplayName ?? recipient.SmtpAddress ?? recipient.EmailAddress,
+                    EmailAddress = recipient.EmailAddress ?? recipient.SmtpAddress,
+                    SmtpAddress = recipient.SmtpAddress ?? recipient.EmailAddress
+                })
+                .ToArray();
+        }
+
+        var displayTo = source.DisplayTo;
+        if (!string.IsNullOrWhiteSpace(displayTo))
+        {
+            return new[]
+            {
+                new PstDraftRecipient
+                {
+                    RecipientType = PstRecipientType.To,
+                    DisplayName = displayTo,
+                    EmailAddress = displayTo,
+                    SmtpAddress = displayTo
+                }
+            };
+        }
+
+        return Array.Empty<PstDraftRecipient>();
+    }
+
+    /// <summary>
+    /// Mengonversi numeric recipient type baseline ke enum draft recipient type.
+    /// </summary>
+    /// <param name="recipientType">Nilai recipient type pada baseline.</param>
+    /// <returns>Enum recipient type untuk draft.</returns>
+    private static PstRecipientType ConvertRecipientType(int? recipientType)
+    {
+        return recipientType switch
+        {
+            (int)PstRecipientType.Cc => PstRecipientType.Cc,
+            (int)PstRecipientType.Bcc => PstRecipientType.Bcc,
+            _ => PstRecipientType.To
+        };
+    }
+
+    /// <summary>
+    /// Mengambil folder store baseline utama untuk benchmark.
+    /// </summary>
+    /// <param name="baseline">Instance baseline PST.</param>
+    /// <returns>Folder store baseline.</returns>
+    private static PstFolder ResolveBenchmarkStoreFolder(PstFile baseline)
+    {
+        var store = baseline.Folders.FirstOrDefault(folder =>
+                        !string.IsNullOrWhiteSpace(folder.Description) ||
+                        !string.IsNullOrWhiteSpace(folder.Comment))
+                    ?? baseline.Folders.FirstOrDefault(folder =>
+                        !string.Equals(folder.Id, "root", StringComparison.OrdinalIgnoreCase))
+                    ?? throw new InvalidOperationException("Store folder baseline tidak ditemukan.");
+        Assert.False(string.IsNullOrWhiteSpace(store.Name), "Nama store baseline kosong.");
+        return store;
+    }
+
+    /// <summary>
+    /// Memastikan konten benchmark output sesuai baseline terbaru berbasis perbandingan object.
+    /// </summary>
+    /// <param name="baseline">PST baseline pembanding.</param>
+    /// <param name="actual">PST hasil output benchmark.</param>
+    private static void AssertBenchmarkContentMatchesBaseline(PstFile baseline, PstFile actual)
+    {
+        var baselineStore = ResolveBenchmarkStoreFolder(baseline);
+        var actualStore = actual.Folders.FirstOrDefault(folder =>
+            string.Equals(folder.Name, baselineStore.Name, StringComparison.OrdinalIgnoreCase));
+        Assert.NotNull(actualStore);
+        Assert.Equal(baselineStore.Description, actualStore!.Description);
+        Assert.Equal(baselineStore.Comment, actualStore.Comment);
+
+        AssertFolderTreeMatches(baselineStore, actualStore);
+    }
+
+    /// <summary>
+    /// Memastikan tree folder dan message antara baseline dan output identik berdasarkan object.
+    /// </summary>
+    /// <param name="expectedFolder">Folder baseline expected.</param>
+    /// <param name="actualFolder">Folder output actual.</param>
+    private static void AssertFolderTreeMatches(PstFolder expectedFolder, PstFolder actualFolder)
+    {
+        Assert.Equal(expectedFolder.Messages.Count, actualFolder.Messages.Count);
+        for (var index = 0; index < expectedFolder.Messages.Count; index++)
+        {
+            AssertMessageMatches(expectedFolder.Messages[index], actualFolder.Messages[index]);
+        }
+
+        Assert.Equal(expectedFolder.SubFolders.Count, actualFolder.SubFolders.Count);
+        foreach (var expectedChild in expectedFolder.SubFolders)
+        {
+            var actualChild = actualFolder.SubFolders.FirstOrDefault(folder =>
+                string.Equals(folder.Name, expectedChild.Name, StringComparison.OrdinalIgnoreCase));
+            Assert.NotNull(actualChild);
+            AssertFolderTreeMatches(expectedChild, actualChild!);
+        }
+    }
+
+    /// <summary>
+    /// Memastikan message actual identik dengan message baseline.
+    /// </summary>
+    /// <param name="expected">Message baseline expected.</param>
+    /// <param name="actual">Message output actual.</param>
+    private static void AssertMessageMatches(PstMessage expected, PstMessage actual)
+    {
+        Assert.Equal(expected.Subject, actual.Subject);
+        Assert.Equal(expected.MessageClass, actual.MessageClass);
+        Assert.Equal(expected.Body, actual.Body);
+        Assert.Equal(expected.HtmlBody, actual.HtmlBody);
+
+        var expectedSender = expected.SenderEmailAddress ?? expected.SenderSmtpAddress ?? expected.SenderName;
+        var actualSender = actual.SenderEmailAddress ?? actual.SenderSmtpAddress ?? actual.SenderName;
+        Assert.Equal(expectedSender, actualSender);
+
+        var expectedTo = expected.Recipients.FirstOrDefault(item => item.RecipientType == (int)PstRecipientType.To)?.SmtpAddress
+            ?? expected.Recipients.FirstOrDefault(item => item.RecipientType == (int)PstRecipientType.To)?.EmailAddress
+            ?? expected.DisplayTo;
+        var actualTo = actual.Recipients.FirstOrDefault(item => item.RecipientType == (int)PstRecipientType.To)?.SmtpAddress
+            ?? actual.Recipients.FirstOrDefault(item => item.RecipientType == (int)PstRecipientType.To)?.EmailAddress
+            ?? actual.DisplayTo;
+        Assert.Equal(expectedTo, actualTo);
+
+        Assert.Equal(expected.Attachments.Count, actual.Attachments.Count);
+        foreach (var expectedAttachment in expected.Attachments)
+        {
+            var expectedFileName = expectedAttachment.LongFileName ?? expectedAttachment.FileName;
+            Assert.False(string.IsNullOrWhiteSpace(expectedFileName), "Nama attachment baseline kosong.");
+            var actualAttachment = actual.Attachments.FirstOrDefault(item =>
+                string.Equals(item.LongFileName, expectedFileName, StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(item.FileName, expectedFileName, StringComparison.OrdinalIgnoreCase));
+            Assert.NotNull(actualAttachment);
+
+            var expectedBytes = expectedAttachment.ReadContentBytes();
+            var actualBytes = actualAttachment!.ReadContentBytes();
+            Assert.NotNull(expectedBytes);
+            Assert.NotNull(actualBytes);
+            Assert.Equal(expectedBytes!.Length, actualBytes!.Length);
+            Assert.Equal(
+                Convert.ToHexString(SHA256.HashData(expectedBytes)),
+                Convert.ToHexString(SHA256.HashData(actualBytes)));
+        }
+    }
+
+    /// <summary>
+    /// Memastikan attachment pada message sama persis dengan fixture file fisik.
+    /// </summary>
+    /// <param name="message">Message benchmark.</param>
+    /// <param name="fileName">Nama attachment.</param>
+    /// <param name="fixturePath">Path fixture source.</param>
+    private static void AssertAttachmentMatchesFixture(PstMessage message, string fileName, string fixturePath)
+    {
+        var expectedBytes = File.ReadAllBytes(fixturePath);
+        var attachment = message.Attachments.FirstOrDefault(item =>
+            string.Equals(item.LongFileName, fileName, StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(item.FileName, fileName, StringComparison.OrdinalIgnoreCase));
+        Assert.NotNull(attachment);
+
+        var actualBytes = attachment!.ReadContentBytes();
+        Assert.NotNull(actualBytes);
+        Assert.Equal(expectedBytes.Length, actualBytes!.Length);
+        Assert.Equal(
+            Convert.ToHexString(SHA256.HashData(expectedBytes)),
+            Convert.ToHexString(SHA256.HashData(actualBytes)));
     }
 }

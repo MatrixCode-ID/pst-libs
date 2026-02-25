@@ -41,7 +41,12 @@ public sealed class NdbBtreeUpdateTests
                 }
             }
 
-            var writer = new NdbWriter(stream, header.HeaderInfo, maxBidCounter);
+            var writer = new NdbWriter(
+                stream,
+                header.HeaderInfo,
+                initialBlockBidCounter: maxBidCounter,
+                initialPageBidCounter: maxBidCounter,
+                enableFreeSpaceReuse: false);
             var entry = writer.WriteExternalBlock(new byte[] { 9, 9, 9 });
             writer.CommitBtrees(header, existingBbt, existingNbt);
 

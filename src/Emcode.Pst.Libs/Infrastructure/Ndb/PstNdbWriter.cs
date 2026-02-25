@@ -21,7 +21,11 @@ namespace Emcode.Pst.Infrastructure.Ndb;
 /// </summary>
 public sealed class PstNdbWriter : IPstWriter, IPstWriterWithContext, IPstFileBootstrapper, IDisposable
 {
+    private const string BlankPstResourceName = "Emcode.Pst.blank.pst";
+    private const uint MessageStoreNidValue = 0x00000021;
+    private const uint StoreFolderNidValue = 0x00008022;
     private const ushort PidTagDisplayName = 0x3001;
+    private const ushort PidTagComment = 0x3004;
     private const ushort PidTagMessageClass = 0x001A;
     private const ushort PidTagSubject = 0x0037;
     private const ushort PidTagNormalizedSubject = 0x0E1D;
@@ -77,6 +81,8 @@ public sealed class PstNdbWriter : IPstWriter, IPstWriterWithContext, IPstFileBo
     private Dictionary<uint, NbtEntry>? _existingNbt;
     private NdbWriter? _ndbWriter;
     private NidAllocator? _nidAllocator;
+    private PstFolder? _storeFolder;
+    private bool _isDisposed;
 
     /// <summary>
     /// Membuat writer NDB dengan opsi format Unicode default.
@@ -102,6 +108,7 @@ public sealed class PstNdbWriter : IPstWriter, IPstWriterWithContext, IPstFileBo
     public void Initialize(PstWriteContext context)
     {
         _context = context ?? throw new ArgumentNullException(nameof(context));
+        _storeFolder = ResolveStoreFolderFromContext(context);
         EnsureWritableOptions();
         EnsureFileInitialized(context.Path, context.Options);
         _stream = new FileStream(context.Path, FileMode.Open, FileAccess.ReadWrite, FileShare.Read);
@@ -119,7 +126,14 @@ public sealed class PstNdbWriter : IPstWriter, IPstWriterWithContext, IPstFileBo
             var maxBidCounter = ResolveMaxBidCounter(_existingBbt.Values, _header.BbtRoot.Bid, _header.NbtRoot.Bid);
             var initialBlockBidCounter = ResolveInitialBidCounter(_header.Counters.NextBlockBidRaw, maxBidCounter);
             var initialPageBidCounter = ResolveInitialBidCounter(_header.Counters.NextPageBidRaw, maxBidCounter);
-            _ndbWriter = new NdbWriter(_stream, _header.HeaderInfo, initialBlockBidCounter, initialPageBidCounter);
+            _ndbWriter = new NdbWriter(
+                _stream,
+                _header.HeaderInfo,
+                _existingBbt.Values,
+                _header.RootState.IbAMapLast,
+                initialBlockBidCounter,
+                initialPageBidCounter,
+                enableFreeSpaceReuse: false);
             _nidAllocator = new NidAllocator(_existingNbt.Values, _header.Counters.NidCounters);
         }
         catch
@@ -169,7 +183,11 @@ public sealed class PstNdbWriter : IPstWriter, IPstWriterWithContext, IPstFileBo
         }
 
         using var destination = new FileStream(path, FileMode.CreateNew, FileAccess.ReadWrite, FileShare.Read);
-        _bootstrapBuilder.Build(destination, PstFormat.Unicode, PstCryptMethod.None);
+        if (!TryWriteEmbeddedBlankBaseline(destination))
+        {
+            _bootstrapBuilder.Build(destination, PstFormat.Unicode, PstCryptMethod.Permute);
+        }
+
         destination.Flush();
     }
 
@@ -203,9 +221,33 @@ public sealed class PstNdbWriter : IPstWriter, IPstWriterWithContext, IPstFileBo
         }
 
         using var destination = new FileStream(path, FileMode.CreateNew, FileAccess.ReadWrite, FileShare.Read);
-        _bootstrapBuilder.BuildAsync(destination, PstFormat.Unicode, PstCryptMethod.None, cancellationToken).GetAwaiter().GetResult();
+        if (!TryWriteEmbeddedBlankBaseline(destination))
+        {
+            _bootstrapBuilder.BuildAsync(destination, PstFormat.Unicode, PstCryptMethod.Permute, cancellationToken).GetAwaiter().GetResult();
+        }
+
         destination.Flush();
         return Task.CompletedTask;
+    }
+
+    /// <summary>
+    /// Menyalin baseline PST embedded (`blank.pst`) ke stream target bila resource tersedia.
+    /// </summary>
+    /// <param name="destination">Stream file tujuan.</param>
+    /// <returns>True bila baseline embedded berhasil ditulis; false bila resource tidak ditemukan.</returns>
+    private static bool TryWriteEmbeddedBlankBaseline(Stream destination)
+    {
+        using var source = typeof(PstNdbWriter).Assembly.GetManifestResourceStream(BlankPstResourceName);
+        if (source is null)
+        {
+            return false;
+        }
+
+        destination.SetLength(0);
+        destination.Seek(0, SeekOrigin.Begin);
+        source.CopyTo(destination);
+        destination.Seek(0, SeekOrigin.Begin);
+        return true;
     }
 
     /// <summary>
@@ -313,6 +355,102 @@ public sealed class PstNdbWriter : IPstWriter, IPstWriterWithContext, IPstFileBo
     }
 
     /// <summary>
+    /// Memperbarui properti store PST (nama dan komentar data file).
+    /// </summary>
+    /// <param name="draft">Draft properti store.</param>
+    public void UpdateStoreProperties(PstStorePropertiesDraft draft)
+    {
+        Guard.NotNull(draft, nameof(draft));
+        EnsureReady();
+        EnsureStoreDraftHasChanges(draft);
+
+        var targetFolder = _storeFolder ?? ResolveStoreFolderFromContext(_context!);
+        if (targetFolder is null)
+        {
+            throw new InvalidOperationException("Folder store PST tidak ditemukan untuk pembaruan properti.");
+        }
+
+        var targetNid = ParseNid(targetFolder.Id);
+        if (targetNid.IsZero || _existingNbt is null || !_existingNbt.TryGetValue(targetNid.Value, out var existingEntry))
+        {
+            throw new InvalidOperationException("NID folder store PST tidak valid untuk pembaruan properti.");
+        }
+
+        var name = string.IsNullOrWhiteSpace(draft.DisplayName) ? targetFolder.Name : draft.DisplayName!;
+        var currentDescription = targetFolder.Description ?? targetFolder.Comment;
+        var description = draft.Description ?? currentDescription;
+        var comment = draft.Comment ?? targetFolder.Comment;
+
+        if (description is null && draft.Comment is not null)
+        {
+            // Backward compatibility: caller lama yang hanya set Comment tetap mengisi description folder seperti perilaku sebelumnya.
+            description = draft.Comment;
+        }
+
+        var folderNode = WriteLtpNode(BuildStorePropertyContext(name, description));
+        var updatedEntry = new NbtEntry(existingEntry.Nid, folderNode.BidData, folderNode.BidSub, existingEntry.NidParent);
+        _ndbWriter!.UpsertNbtEntry(updatedEntry);
+        _existingNbt[targetNid.Value] = updatedEntry;
+
+        targetFolder.Name = name;
+        if (description is not null)
+        {
+            targetFolder.Description = description;
+        }
+
+        if (draft.Comment is not null)
+        {
+            targetFolder.Comment = draft.Comment;
+        }
+
+        if (_existingNbt.TryGetValue(MessageStoreNidValue, out var messageStoreEntry))
+        {
+            var storeNode = WriteLtpNode(BuildStorePropertyContext(name, comment));
+            var updatedStoreEntry = new NbtEntry(
+                messageStoreEntry.Nid,
+                storeNode.BidData,
+                storeNode.BidSub,
+                messageStoreEntry.NidParent);
+            _ndbWriter.UpsertNbtEntry(updatedStoreEntry);
+            _existingNbt[MessageStoreNidValue] = updatedStoreEntry;
+        }
+    }
+
+    /// <summary>
+    /// Memperbarui properti store PST secara asynchronous.
+    /// </summary>
+    /// <param name="draft">Draft properti store.</param>
+    /// <param name="cancellationToken">Token pembatalan operasi.</param>
+    /// <returns>Task representasi operasi update.</returns>
+    public Task UpdateStorePropertiesAsync(PstStorePropertiesDraft draft, CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        UpdateStoreProperties(draft);
+        return Task.CompletedTask;
+    }
+
+    /// <summary>
+    /// Menyimpan perubahan write yang tertunda ke file PST.
+    /// </summary>
+    public void Save()
+    {
+        EnsureReady();
+        CommitPendingChanges();
+        _stream!.Flush();
+    }
+
+    /// <summary>
+    /// Menyimpan perubahan write yang tertunda ke file PST secara asynchronous.
+    /// </summary>
+    /// <param name="cancellationToken">Token pembatalan operasi.</param>
+    public Task SaveAsync(CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        Save();
+        return Task.CompletedTask;
+    }
+
+    /// <summary>
     /// Memperbarui pesan yang sudah ada (belum didukung).
     /// </summary>
     public void UpdateMessage(PstMessage message, PstMessageDraft draft)
@@ -347,17 +485,81 @@ public sealed class PstNdbWriter : IPstWriter, IPstWriterWithContext, IPstFileBo
     }
 
     /// <summary>
+    /// Memastikan draft update store memiliki perubahan yang valid.
+    /// </summary>
+    /// <param name="draft">Draft properti store.</param>
+    private static void EnsureStoreDraftHasChanges(PstStorePropertiesDraft draft)
+    {
+        if (!string.IsNullOrWhiteSpace(draft.DisplayName) || draft.Description is not null || draft.Comment is not null)
+        {
+            return;
+        }
+
+        throw new ArgumentException("DisplayName, Description, atau Comment harus diisi untuk update store.", nameof(draft));
+    }
+
+    /// <summary>
+    /// Menentukan folder store utama dari konteks pembacaan PST.
+    /// </summary>
+    /// <param name="context">Konteks write PST.</param>
+    /// <returns>Folder store kandidat atau null.</returns>
+    private static PstFolder? ResolveStoreFolderFromContext(PstWriteContext context)
+    {
+        var storeFolderId = $"0x{StoreFolderNidValue:X8}";
+        var byFixedNid = context.Folders.FirstOrDefault(folder => string.Equals(folder.Id, storeFolderId, StringComparison.OrdinalIgnoreCase));
+        if (byFixedNid is not null)
+        {
+            return byFixedNid;
+        }
+
+        var top = context.Folders.FirstOrDefault(
+            folder => string.Equals(folder.Name, "Top of Outlook data file", StringComparison.OrdinalIgnoreCase));
+        if (top is not null)
+        {
+            return top;
+        }
+
+        if (context.RootFolder is not null && context.RootFolder.SubFolders.Count > 0)
+        {
+            var fromRoot = context.RootFolder.SubFolders.FirstOrDefault(
+                folder => string.Equals(folder.Id, storeFolderId, StringComparison.OrdinalIgnoreCase));
+            if (fromRoot is not null)
+            {
+                return fromRoot;
+            }
+        }
+
+        return context.Folders.FirstOrDefault(folder => !string.Equals(folder.Id, "root", StringComparison.OrdinalIgnoreCase));
+    }
+
+    /// <summary>
     /// Melepas resource stream dan melakukan commit BBT/NBT.
     /// </summary>
     public void Dispose()
     {
-        if (_stream is not null && _header is not null && _existingBbt is not null && _existingNbt is not null && _ndbWriter is not null)
+        if (_isDisposed)
         {
-            _ndbWriter.CommitBtrees(_header, _existingBbt, _existingNbt, _nidAllocator?.SnapshotNextNids());
+            return;
         }
+
+        CommitPendingChanges();
 
         _stream?.Dispose();
         _stream = null;
+        _isDisposed = true;
+    }
+
+    /// <summary>
+    /// Melakukan commit BBT/NBT bila state writer sudah siap.
+    /// </summary>
+    private void CommitPendingChanges()
+    {
+        if (_stream is null || _header is null || _existingBbt is null || _existingNbt is null || _ndbWriter is null)
+        {
+            return;
+        }
+
+        _ndbWriter.CommitBtrees(_header, _existingBbt, _existingNbt, _nidAllocator?.SnapshotNextNids());
     }
 
     /// <summary>
@@ -406,6 +608,7 @@ public sealed class PstNdbWriter : IPstWriter, IPstWriterWithContext, IPstFileBo
         return headerCounter > fallbackCounter ? headerCounter : fallbackCounter;
     }
 
+
     /// <summary>
     /// Memastikan file tidak dalam state AMap invalid sebelum operasi write.
     /// </summary>
@@ -426,12 +629,27 @@ public sealed class PstNdbWriter : IPstWriter, IPstWriterWithContext, IPstFileBo
     /// </summary>
     /// <param name="name">Nama folder.</param>
     /// <returns>Hasil penulisan LTP.</returns>
-    private LtpWriteResult BuildFolderPropertyContext(string name)
+    private LtpWriteResult BuildStorePropertyContext(string name, string? comment = null)
     {
         var ltp = new LtpWriter(_ltpOptions);
         var pc = ltp.CreatePropertyContextWriter();
         pc.SetString(PidTagDisplayName, name);
+        if (comment is not null)
+        {
+            pc.SetString(PidTagComment, comment);
+        }
+
         return pc.BuildResult();
+    }
+
+    /// <summary>
+    /// Membangun Property Context untuk folder biasa.
+    /// </summary>
+    /// <param name="name">Nama folder.</param>
+    /// <returns>Hasil penulisan LTP.</returns>
+    private LtpWriteResult BuildFolderPropertyContext(string name)
+    {
+        return BuildStorePropertyContext(name);
     }
 
     /// <summary>
@@ -1195,6 +1413,11 @@ public sealed class PstNdbWriter : IPstWriter, IPstWriterWithContext, IPstFileBo
     /// </summary>
     private void EnsureReady()
     {
+        if (_isDisposed)
+        {
+            throw new ObjectDisposedException(nameof(PstNdbWriter));
+        }
+
         if (_context is null || _ndbWriter is null || _header is null || _existingBbt is null || _existingNbt is null || _nidAllocator is null)
         {
             throw new InvalidOperationException("Writer belum diinisialisasi dengan konteks PST.");

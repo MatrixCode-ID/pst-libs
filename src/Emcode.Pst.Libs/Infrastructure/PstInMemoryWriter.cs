@@ -60,6 +60,25 @@ public sealed class PstInMemoryWriter : IPstWriter, IPstWriterWithContext
     }
 
     /// <summary>
+    /// Menyimpan perubahan write secara eksplisit pada mode in-memory.
+    /// </summary>
+    public void Save()
+    {
+        EnsureReady();
+    }
+
+    /// <summary>
+    /// Menyimpan perubahan write secara eksplisit pada mode in-memory (async).
+    /// </summary>
+    /// <param name="cancellationToken">Token pembatalan operasi.</param>
+    public Task SaveAsync(CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        Save();
+        return Task.CompletedTask;
+    }
+
+    /// <summary>
     /// Membuat folder baru pada PST secara in-memory.
     /// </summary>
     /// <param name="name">Nama folder baru.</param>
@@ -151,6 +170,50 @@ public sealed class PstInMemoryWriter : IPstWriter, IPstWriterWithContext
     }
 
     /// <summary>
+    /// Memperbarui properti store PST (nama dan komentar) secara in-memory.
+    /// </summary>
+    /// <param name="draft">Draft properti store.</param>
+    public void UpdateStoreProperties(PstStorePropertiesDraft draft)
+    {
+        Guard.NotNull(draft, nameof(draft));
+        EnsureReady();
+        EnsureStoreDraftHasChanges(draft);
+
+        var target = ResolveStoreFolder();
+        if (target is null)
+        {
+            throw new InvalidOperationException("Folder store PST tidak ditemukan untuk pembaruan properti.");
+        }
+
+        if (!string.IsNullOrWhiteSpace(draft.DisplayName))
+        {
+            target.Name = draft.DisplayName;
+        }
+
+        if (draft.Description is not null)
+        {
+            target.Description = draft.Description;
+        }
+
+        if (draft.Comment is not null)
+        {
+            target.Comment = draft.Comment;
+        }
+    }
+
+    /// <summary>
+    /// Memperbarui properti store PST secara asynchronous (in-memory).
+    /// </summary>
+    /// <param name="draft">Draft properti store.</param>
+    /// <param name="cancellationToken">Token pembatalan operasi.</param>
+    public Task UpdateStorePropertiesAsync(PstStorePropertiesDraft draft, CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        UpdateStoreProperties(draft);
+        return Task.CompletedTask;
+    }
+
+    /// <summary>
     /// Memperbarui pesan yang sudah ada secara in-memory.
     /// </summary>
     /// <param name="message">Pesan yang akan diperbarui.</param>
@@ -204,6 +267,45 @@ public sealed class PstInMemoryWriter : IPstWriter, IPstWriterWithContext
     {
         DeleteMessage(message);
         return Task.CompletedTask;
+    }
+
+    /// <summary>
+    /// Menentukan folder store utama yang tampil sebagai root mailbox/data file.
+    /// </summary>
+    /// <returns>Folder store kandidat atau null.</returns>
+    private PstFolder? ResolveStoreFolder()
+    {
+        var root = _context?.RootFolder;
+        if (root is not null)
+        {
+            var top = root.SubFolders.FirstOrDefault(
+                folder => string.Equals(folder.Name, "Top of Outlook data file", StringComparison.OrdinalIgnoreCase));
+            if (top is not null)
+            {
+                return top;
+            }
+
+            if (root.SubFolders.Count > 0)
+            {
+                return root.SubFolders[0];
+            }
+        }
+
+        return _context?.Folders.FirstOrDefault(folder => !string.Equals(folder.Id, "root", StringComparison.OrdinalIgnoreCase));
+    }
+
+    /// <summary>
+    /// Memastikan draft store memiliki setidaknya satu perubahan yang akan diterapkan.
+    /// </summary>
+    /// <param name="draft">Draft properti store.</param>
+    private static void EnsureStoreDraftHasChanges(PstStorePropertiesDraft draft)
+    {
+        if (!string.IsNullOrWhiteSpace(draft.DisplayName) || draft.Description is not null || draft.Comment is not null)
+        {
+            return;
+        }
+
+        throw new ArgumentException("DisplayName, Description, atau Comment harus diisi untuk update store.", nameof(draft));
     }
 
     private void AttachFolder(PstFolder? parent, PstFolder folder)

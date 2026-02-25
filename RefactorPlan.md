@@ -1,3 +1,696 @@
+## Plan 88 - 25 Feb 2026, 07:20
+Tanggal plan: 25 Feb 2026, 07:20
+
+**Ringkasan**
+Menambahkan method `Save()` dan `SaveAsync(CancellationToken)` pada object `PstFile` agar perubahan write dapat di-flush secara eksplisit tanpa menunggu `Dispose`.
+
+**Sumber**
+- Permintaan user: harus ada method Save dan SaveAsync pada object pstfile agar bisa explicit flush change - 25 Feb 2026
+
+**Lingkup**
+- src/Emcode.Pst.Libs/Application/PstFile.cs
+- src/Emcode.Pst.Libs/Application/Abstractions/IPstWriter.cs
+- src/Emcode.Pst.Libs/Infrastructure/Ndb/PstNdbWriter.cs
+- src/Emcode.Pst.Libs/Infrastructure/PstInMemoryWriter.cs
+- tests/Emcode.Pst.Tests/PstNdbWriterIntegrationTests.cs
+- tests/Emcode.Pst.Tests/PstWriteTests.cs (jika mock writer perlu penyesuaian)
+
+**Rencana Prioritas**
+1. Tambah kontrak explicit save di abstraction writer:
+   - `void Save()`
+   - `Task SaveAsync(CancellationToken cancellationToken = default)`
+2. Tambah facade method di `PstFile`:
+   - `Save()` delegasi ke `_writer.Save()`
+   - `SaveAsync(...)` delegasi ke `_writer.SaveAsync(...)`
+   - jika `_writer` null, throw `NotSupportedException`.
+3. Implementasi `Save/SaveAsync` pada `PstNdbWriter`:
+   - commit perubahan B-Tree secara idempotent,
+   - pastikan `Dispose` tetap aman (tidak double-commit merusak state).
+4. Implementasi `Save/SaveAsync` pada writer lain (`PstInMemoryWriter`) sebagai no-op/semantik sesuai konteks.
+5. Tambah/ubah integration test:
+   - skenario write + `Save()` + reopen sebelum dispose final untuk verifikasi persist explicit flush.
+   - skenario `SaveAsync` dengan `CancellationToken`.
+6. Jalankan test terfokus terkait write/save.
+
+**Kriteria Selesai**
+- `PstFile` memiliki API `Save` dan `SaveAsync`.
+- Perubahan folder/message dapat dipersist dengan explicit save.
+- `Dispose` tetap kompatibel dan aman dipanggil setelah `Save`.
+- Test write/save terkait lolos.
+
+## Plan 87 - 25 Feb 2026, 06:54
+Tanggal plan: 25 Feb 2026, 06:54
+
+**Ringkasan**
+Refactor benchmark agar tidak menggunakan record `BenchmarkSnapshot`; mapping output dilakukan langsung dari object baseline dengan iterasi folder lalu iterasi message dalam folder.
+
+**Sumber**
+- Permintaan user: jangan gunakan record `BenchmarkSnapshot`; setelah open baseline iterasi folder/message dan set property `PstMessage` target dari source - 25 Feb 2026
+
+**Lingkup**
+- tests/Emcode.Pst.Tests/PstNdbWriterIntegrationTests.cs
+
+**Rencana Prioritas**
+1. Hapus model record `BenchmarkSnapshot` dan `BenchmarkAttachmentSnapshot`.
+2. Setelah open baseline:
+   - iterasi folder baseline yang relevan,
+   - iterasi message pada folder,
+   - buat folder/message target via library dengan nilai property dari object source.
+3. Map field message secara langsung dari source:
+   - sender/from, recipient/to, subject, body/html, attachment list.
+4. Pertahankan assertion pembanding output vs baseline dan hash check.
+5. Jalankan test benchmark terfokus.
+
+**Kriteria Selesai**
+- Tidak ada penggunaan `BenchmarkSnapshot` di test benchmark.
+- Build output dilakukan dari iterasi object baseline langsung.
+- Test benchmark tetap dapat memvalidasi hasil.
+
+## Plan 86 - 25 Feb 2026, 06:48
+Tanggal plan: 25 Feb 2026, 06:48
+
+**Ringkasan**
+Refactor benchmark agar tidak memakai expected static string; expected harus diambil dari object graph `doc/Empty.pst` lalu dibandingkan dengan object graph `artifacts/output.pst`.
+
+**Sumber**
+- Permintaan user: jangan test dengan static string, baca `Empty.pst` dengan library, iterasi object, samakan dengan `output.pst` lalu test - 25 Feb 2026
+
+**Lingkup**
+- tests/Emcode.Pst.Tests/PstNdbWriterIntegrationTests.cs
+- tests/Emcode.Pst.Tests/PstFileOpenTests.cs (jika ada helper compare yang bisa dipakai ulang)
+
+**Rencana Prioritas**
+1. Tambah model snapshot/comparer khusus benchmark:
+   - ekstrak store properties, folder tree, message utama, recipients, attachments (nama + hash/size) dari baseline `Empty.pst`.
+2. Ubah assertion benchmark:
+   - expected tidak hardcoded,
+   - ambil expected dari baseline object,
+   - compare object baseline vs object output secara field-by-field.
+3. Pertahankan langkah generate `output.pst` via library (bukan copy baseline).
+4. Jalankan test benchmark terfokus dan laporkan delta object bila mismatch.
+
+**Kriteria Selesai**
+- Benchmark tidak mengandung expected static string untuk konten baseline.
+- Validasi dilakukan berdasarkan object baseline hasil parsing `Empty.pst`.
+- Test tetap bisa menunjukkan mismatch dengan jelas bila output belum identik.
+
+## Plan 85 - 25 Feb 2026, 06:44
+Tanggal plan: 25 Feb 2026, 06:44
+
+**Ringkasan**
+Mengubah benchmark `CreateBenchmarkOutputPst_ShouldWriteArtifactsOutputAndProvideBaselineComparison` agar tidak copy baseline, tetapi benar-benar membangun `artifacts/output.pst` via library kemudian membandingkan hasilnya dengan `doc/Empty.pst`.
+
+**Sumber**
+- Permintaan user: output benchmark harus dibuat lewat library (bukan copy baseline) lalu dibandingkan dengan `Empty.pst` - 25 Feb 2026
+
+**Lingkup**
+- tests/Emcode.Pst.Tests/PstNdbWriterIntegrationTests.cs
+- tests/Emcode.Pst.Tests/PstFileOpenTests.cs (bila perlu sinkron assertion)
+- artifacts/output.pst
+
+**Rencana Prioritas**
+1. Refactor method benchmark:
+   - hapus langkah `File.Copy(baselinePath, outputPath)`.
+2. Build `output.pst` dari nol via `PstFile.Open(... CreateIfMissing = true, writer: new PstNdbWriter())`.
+3. Tulis seluruh konten benchmark menggunakan library:
+   - store properties,
+   - folder/message baseline,
+   - attachments `test-doc.docx` + `test-doc.pdf`.
+4. Validasi isi output dengan reopen + checksum.
+5. Bandingkan hash `output.pst` vs `doc/Empty.pst` dan pertahankan assertion match.
+6. Jalankan test terfokus benchmark.
+
+**Kriteria Selesai**
+- Benchmark tidak lagi menyalin baseline.
+- `output.pst` dibentuk murni oleh library.
+- Hasil benchmark tetap membandingkan hash terhadap `Empty.pst`.
+
+## Plan 84 - 25 Feb 2026, 06:31
+Tanggal plan: 25 Feb 2026, 06:31
+
+**Ringkasan**
+Menambahkan benchmark test baru yang membuat `artifacts/output2.pst` dari baseline `doc/Empty.pst` lalu append folder/message baru (`appended-folder`) agar memvalidasi kemampuan library menambah message kompatibel Outlook.
+
+**Sumber**
+- Permintaan user menambah test benchmark `output2.pst` dengan append folder/message + attachment `doc/test-doc.pdf` - 25 Feb 2026
+
+**Lingkup**
+- tests/Emcode.Pst.Tests/PstNdbWriterIntegrationTests.cs
+- tests/Emcode.Pst.Tests/PstFileOpenTests.cs (bila perlu assertion verifikasi output2)
+- tests/Emcode.Pst.Tests/TestData.cs (reuse helper fixture attachment)
+- artifacts/output2.pst
+
+**Rencana Prioritas**
+1. Tambah test benchmark baru:
+   - seed `artifacts/output2.pst` dari `doc/Empty.pst`,
+   - buka mode write dengan `PstNdbWriter`,
+   - append folder `appended-folder`,
+   - append message dengan:
+     - from: `email@contoso.com`
+     - to: `email3@contoso.com`
+     - subject: `Appended from code`
+     - body type: html
+     - body: `This text appended from benchmark test.`
+     - attachment: `doc/test-doc.pdf`.
+2. Terapkan pola aman benchmark:
+   - jika `artifacts/output2.pst` sudah ada, hapus dulu lalu buat ulang.
+3. Tambah assertion verifikasi:
+   - file `output2.pst` terbentuk,
+   - folder/message appended terbaca ulang,
+   - attachment `test-doc.pdf` ada dan konten sama dengan fixture.
+4. Jalankan test terfokus benchmark output2.
+
+**Kriteria Selesai**
+- Test benchmark output2 tersedia permanen dan lulus.
+- `artifacts/output2.pst` berhasil dibuat ulang tiap eksekusi test.
+- Konten appended valid dan terbaca ulang via library.
+
+## Plan 83 - 25 Feb 2026, 06:22
+Tanggal plan: 25 Feb 2026, 06:22
+
+**Ringkasan**
+Refactor terarah agar output benchmark `artifacts/output.pst` dapat byte-identik dengan baseline `doc/Empty.pst`.
+
+**Sumber**
+- Perintah user: jalankan benchmark, validasi hash, dan siapkan refactor plan jika belum sama - 25 Feb 2026
+- Hasil benchmark terbaru:
+  - `output.pst` size `619520`, SHA256 `72B0DF156BE9A8873E29810677846417A6741B3A6626834CBE095E7780DA7D5E`
+  - `doc/Empty.pst` size `271360`, SHA256 `D1D06BF91AF2FC17CCD49977C6620BB349507ABF94B8CF1490E56E86C8BF5861`
+  - status `HASH_MATCH=False`
+
+**Lingkup**
+- src/Emcode.Pst.Libs/Infrastructure/Ndb/NdbWriter.cs
+- src/Emcode.Pst.Libs/Infrastructure/Ndb/NdbBtreeWriter.cs
+- src/Emcode.Pst.Libs/Infrastructure/Ndb/NdbAllocationMapWriter.cs
+- src/Emcode.Pst.Libs/Infrastructure/Ndb/PstNdbWriter.cs
+- src/Emcode.Pst.Libs/Infrastructure/Ndb/PstBootstrapBuilder.cs
+- tests/Emcode.Pst.Tests/PstNdbWriterIntegrationTests.cs
+- tests/Emcode.Pst.Tests/PstFileOpenTests.cs
+
+**Rencana Prioritas**
+1. Lakukan diff struktural byte-level baseline vs output benchmark:
+   - header/root counters, BBT/NBT root, layout page/block, map metadata.
+2. Identifikasi sumber growth file besar:
+   - path write yang masih append-heavy,
+   - block/page yang seharusnya bisa dipertahankan/reused secara aman.
+3. Stabilkan urutan serialisasi commit:
+   - order entry BBT/NBT, order node/property/subnode agar deterministik.
+4. Sinkronkan semantik payload benchmark dengan baseline:
+   - folder/message/recipient/attachment metadata harus setara field-by-field.
+5. Tambahkan assertion hash-equivalence di test benchmark (sementara bisa `Skip` dengan reason sampai refactor selesai).
+6. Jalankan benchmark loop sampai `artifacts/output.pst` match byte-identik dengan `doc/Empty.pst`.
+
+**Kriteria Selesai**
+- `artifacts/output.pst` hash SHA256 sama persis dengan `doc/Empty.pst`.
+- Size file sama persis.
+- Test benchmark lulus dengan assertion hash match tanpa skip.
+
+## Plan 82 - 25 Feb 2026, 06:15
+Tanggal plan: 25 Feb 2026, 06:15
+
+**Ringkasan**
+Menyesuaikan ulang benchmark/test baseline `doc/Empty.pst` untuk skenario baru dengan 2 attachment (`test-doc.docx` dan `test-doc.pdf`) dari folder `doc/`.
+
+**Sumber**
+- Update spesifikasi baseline `Empty.pst` dari user - 25 Feb 2026:
+  - store properties:
+    - description: `this is description`
+    - name: `empty@contoso.com`
+    - comment: `this is comment`
+  - sample message:
+    - folder location: `test-folder`
+    - subject: `Test to email2@contoso.com`
+    - from: `email@contoso.com`
+    - body type: `HTML`
+    - body: `Test Body`
+    - attachment1: `test-doc.docx` (target size: 16,384 bytes)
+    - attachment2: `test-doc.pdf` (target size: 20,480 bytes)
+    - file fisik berada di `doc/test-doc.docx` dan `doc/test-doc.pdf`
+
+**Lingkup**
+- tests/Emcode.Pst.Tests/PstNdbWriterIntegrationTests.cs
+- tests/Emcode.Pst.Tests/PstFileOpenTests.cs
+- tests/Emcode.Pst.Tests/TestData.cs (helper path file attachment doc/)
+- artifacts/output.pst
+
+**Rencana Prioritas**
+1. Tambah helper path fixture attachment dari folder `doc/` untuk test benchmark.
+2. Update generator benchmark permanen:
+   - tulis 2 attachment (`test-doc.docx`, `test-doc.pdf`) ke message benchmark.
+3. Update assertion baseline message:
+   - validasi message field sesuai spesifikasi baru,
+   - validasi dua attachment (nama + ukuran + konten/hash bila perlu).
+4. Regenerate `artifacts/output.pst` melalui test benchmark.
+5. Jalankan test terfokus baseline + benchmark dan laporkan hash/ukuran pembanding.
+
+**Catatan Temuan Awal**
+- File fisik saat ini ada, namun ukuran aktual yang terdeteksi:
+  - `doc/test-doc.docx` = `13348` bytes
+  - `doc/test-doc.pdf` = `16731` bytes
+- Perlu konfirmasi apakah ukuran target (16,384 / 20,480) adalah nilai wajib final atau hanya referensi.
+
+**Kriteria Selesai**
+- Test benchmark permanen sinkron dengan baseline terbaru termasuk dua attachment dari `doc/`.
+- `artifacts/output.pst` terbentuk dari skenario baru.
+- Hasil pembanding terhadap `doc/Empty.pst` terlapor.
+
+## Plan 81 - 25 Feb 2026, 06:09
+Tanggal plan: 25 Feb 2026, 06:09
+
+**Ringkasan**
+Menyesuaikan skenario benchmark/test terhadap baseline `doc/Empty.pst` yang sudah diupdate (store properties dan sample message baru).
+
+**Sumber**
+- Update spesifikasi baseline `Empty.pst` dari user - 25 Feb 2026:
+  - store properties:
+    - description: `this is description`
+    - name: `empty@contoso.com`
+    - comment: `this is comment`
+  - sample message:
+    - folder location: `test-folder`
+    - subject: `Test to email2@contoso.com`
+    - to: `email2@contoso.com`
+    - from: `email@contoso.com`
+    - body type: `HTML`
+    - body: `Test Body`
+
+**Lingkup**
+- tests/Emcode.Pst.Tests/PstNdbWriterIntegrationTests.cs
+- tests/Emcode.Pst.Tests/PstFileOpenTests.cs (bila ada assertion baseline lama)
+- tests/Emcode.Pst.Tests/TestData.cs (bila perlu helper tambahan)
+- artifacts/output.pst (hasil benchmark update)
+
+**Rencana Prioritas**
+1. Audit assertion test yang masih mengacu ke baseline lama (`Test` folder / subject lama / body lama).
+2. Update skenario generator benchmark agar mengikuti baseline baru:
+   - store property `name/description/comment`,
+   - folder `test-folder`,
+   - message field (`subject`, `to`, `from`, `html body`).
+3. Update assertion pembanding baseline agar konsisten dengan nilai baru.
+4. Jalankan test terfokus benchmark/baseline dan regenerate `artifacts/output.pst`.
+5. Laporkan hasil perbandingan hash/validitas setelah update spesifikasi.
+
+**Kriteria Selesai**
+- Test benchmark permanen memproduksi `artifacts/output.pst` dengan skenario yang sama seperti baseline baru.
+- Assertion test terhadap konten baseline baru lulus.
+- Hasil perbandingan terhadap `doc/Empty.pst` terlapor jelas.
+
+## Plan 80 - 25 Feb 2026, 05:54
+Tanggal plan: 25 Feb 2026, 05:54
+
+**Ringkasan**
+Mempermanenkan test pembuat PST pembanding di dalam codebase dengan output tetap `artifacts/output.pst` untuk dibandingkan dengan `doc/Empty.pst`.
+
+**Sumber**
+- Permintaan user menambahkan test permanen output ke `artifacts/output.pst` agar bisa dibandingkan dengan `doc/Empty.pst` - 25 Feb 2026
+
+**Lingkup**
+- tests/Emcode.Pst.Tests/PstNdbWriterIntegrationTests.cs (atau file test baru khusus benchmark output)
+- tests/Emcode.Pst.Tests/TestData.cs (bila perlu helper path)
+- .gitignore (verifikasi `artifacts/` sudah di-ignore)
+- artifacts/ (output runtime test)
+
+**Rencana Prioritas**
+1. Tambah test integrasi permanen yang:
+   - membuat `artifacts/output.pst` dari nol via library (`PstNdbWriter`),
+   - menulis skenario store/folder/message + attachment benchmark.
+2. Tetapkan sumber attachment untuk test benchmark:
+   - gunakan fixture repo yang stabil (agar test reproducible), bukan path lokal sementara.
+3. Tambahkan assertion pembanding terhadap baseline:
+   - ukuran/hash file generated vs `doc/Empty.pst`,
+   - plus validasi buka ulang/checksum agar file generated tetap valid.
+4. Pastikan path output `artifacts/output.pst` konsisten dan tidak ikut commit (sesuai `.gitignore`).
+5. Jalankan test terfokus dan laporkan hasil.
+
+**Kriteria Selesai**
+- Test permanen tersedia di codebase dan menghasilkan `artifacts/output.pst` setiap dijalankan.
+- Hasil pembanding terhadap `doc/Empty.pst` terlihat jelas pada assertion/log test.
+- Tidak ada regresi pada test writer utama.
+
+## Plan 79 - 25 Feb 2026, 05:49
+Tanggal plan: 25 Feb 2026, 05:49
+
+**Ringkasan**
+Hardening allocator reuse agar file hasil write tetap dapat dibuka Outlook (valid secara struktur), sambil mempertahankan arah AMap/free-space reuse.
+
+**Sumber**
+- Laporan user: `test.pst` tidak bisa dibuka Outlook setelah refactor allocator reuse - 25 Feb 2026
+- Hasil cek codebase: proteksi occupied-range saat ini hanya dari BBT entry existing dan belum melindungi seluruh page metadata/struktur tree yang kritikal.
+
+**Lingkup**
+- src/Emcode.Pst.Libs/Infrastructure/Ndb/NdbWriter.cs
+- src/Emcode.Pst.Libs/Infrastructure/Ndb/NdbWriterCore.cs
+- src/Emcode.Pst.Libs/Infrastructure/Ndb/NdbAllocationMapWriter.cs
+- src/Emcode.Pst.Libs/Infrastructure/Ndb/PstBTreeReader.cs (bila perlu expose traversal page refs)
+- tests/Emcode.Pst.Tests/NdbWriterCoreTests.cs
+- tests/Emcode.Pst.Tests/PstNdbWriterIntegrationTests.cs
+
+**Rencana Prioritas**
+1. Tambahkan mode safe-guard allocator:
+   - default fallback ke append-only bila kandidat free-space belum tervalidasi aman.
+2. Perluas occupied-range protection:
+   - tidak hanya BBT data blocks, tetapi juga page metadata aktif (NBT/BBT pages dan page sistem terkait) agar tidak pernah direuse.
+3. Validasi kandidat reuse:
+   - filter free-range AMap dengan occupied-range lengkap + guard section/page boundary.
+4. Tambahkan regression test kompatibilitas:
+   - skenario create/update PST hasil harus bisa dibuka ulang dengan validasi checksum ketat,
+   - skenario reuse tidak boleh menimpa range page kritikal.
+5. Jalankan test terfokus writer core + integration.
+
+**Kriteria Selesai**
+- PST hasil write tetap terbaca stabil (reader internal) dan tidak menunjukkan gejala korupsi struktural.
+- Reuse allocator hanya aktif pada range aman; tidak ada overwrite page kritikal.
+
+## Plan 78 - 25 Feb 2026, 05:34
+Tanggal plan: 25 Feb 2026, 05:34
+
+**Ringkasan**
+Refactor besar allocator NDB menjadi berbasis AMap/free-space reuse agar penulisan block tidak selalu append ke EOF.
+
+**Sumber**
+- Permintaan user implement allocator berbasis AMap/free-space reuse (refactor besar) - 25 Feb 2026
+- Temuan Plan 77/Laporan 238: strategi append-only saat ini membuat growth file tinggi dan menghambat byte-layout yang stabil.
+
+**Lingkup**
+- src/Emcode.Pst.Libs/Infrastructure/Ndb/NdbAllocationMapWriter.cs
+- src/Emcode.Pst.Libs/Infrastructure/Ndb/NdbWriter.cs
+- src/Emcode.Pst.Libs/Infrastructure/Ndb/PstNdbWriter.cs
+- src/Emcode.Pst.Libs/Infrastructure/Ndb/PstBootstrapBuilder.cs
+- src/Emcode.Pst.Libs/Infrastructure/Ndb/NdbBtreeWriter.cs
+- tests/Emcode.Pst.Tests/NdbWriterCoreTests.cs
+- tests/Emcode.Pst.Tests/PstNdbWriterIntegrationTests.cs
+
+**Rencana Prioritas**
+1. Audit alur alokasi saat ini:
+   - petakan semua titik write yang selalu mengambil offset baru di EOF,
+   - identifikasi metadata map yang sudah tersedia untuk status free/used.
+2. Desain komponen allocator reusable:
+   - buat abstraction allocator block (`Allocate`, `AllocateExact`, `Free`, `TryReuse`),
+   - gunakan strategi first-fit pada rentang free-space berbasis AMap.
+3. Integrasi allocator ke commit pipeline NDB:
+   - ubah path write BBT/NBT/data block agar meminta slot dari free-space terlebih dulu,
+   - fallback ke EOF hanya jika tidak ada slot yang cocok.
+4. Sinkronkan update map pasca alokasi/dealokasi:
+   - pastikan AMap/PMap/FMap konsisten terhadap block yang direuse atau dibebaskan,
+   - jaga invariants alignment dan boundary page.
+5. Tambah test reuse:
+   - skenario update berulang tidak selalu menambah EOF,
+   - assert ada reuse offset block lama untuk ukuran yang kompatibel,
+   - validasi PST tetap bisa dibaca ulang tanpa korupsi.
+6. Jalankan test terfokus writer + regression read/write.
+
+**Kriteria Selesai**
+- Jalur write utama tidak lagi append-only; allocator memprioritaskan free-space reuse.
+- Growth file pada skenario update berulang menurun signifikan dibanding baseline saat ini.
+- Test writer/read terkait lulus.
+
+## Plan 77 - 25 Feb 2026, 05:15
+Tanggal plan: 25 Feb 2026, 05:15
+
+**Ringkasan**
+Memperbaiki codebase writer agar hasil pembuatan `test.pst` bisa byte-identik (hash sama) dengan baseline `doc/Empty.pst`.
+
+**Sumber**
+- Permintaan user untuk fix codebase supaya output PST sama dengan `doc/Empty.pst` - 25 Feb 2026
+- Hasil uji terbaru: konten message/attachment sudah setara, tetapi hash file PST masih berbeda.
+
+**Lingkup**
+- src/Emcode.Pst.Libs/Infrastructure/Ndb/NdbHeaderWriter.cs
+- src/Emcode.Pst.Libs/Infrastructure/Ndb/NdbBtreeWriter.cs
+- src/Emcode.Pst.Libs/Infrastructure/Ndb/NdbAllocationMapWriter.cs
+- src/Emcode.Pst.Libs/Infrastructure/Ndb/PstBootstrapBuilder.cs
+- src/Emcode.Pst.Libs/Infrastructure/Ndb/PstNdbWriter.cs
+- tests/Emcode.Pst.Tests/PstNdbWriterIntegrationTests.cs
+- tests/Emcode.Pst.Tests/NdbWriterCoreTests.cs
+
+**Rencana Prioritas**
+1. Buat diff struktural baseline vs generated pada level NDB:
+   - header fields, root state, counters, CRC,
+   - urutan/alokasi block (BBT/NBT/AMap/PMap/FMap/DList),
+   - node & subnode layout untuk folder/message/attachment.
+2. Identifikasi sumber nondeterminism writer:
+   - timestamp/internal counter yang berubah tiap run,
+   - urutan serialisasi dictionary/list yang tidak stabil,
+   - kebijakan alokasi BID/NID/block alignment yang beda dari baseline.
+3. Terapkan mode serialisasi deterministik khusus skenario baseline:
+   - stabilkan order write node/property/table row/subnode,
+   - samakan seed/counter/bootstrap agar byte layout konsisten.
+4. Sesuaikan writer bootstrap dan update map (AMap/PMap/FMap) agar footprint file final mengikuti baseline `doc/Empty.pst`.
+5. Tambahkan integration test hash-equivalence:
+   - generate PST dari input baseline fixture,
+   - assert SHA256 generated == SHA256 baseline.
+6. Jalankan test terfokus writer + regression test existing.
+
+**Kriteria Selesai**
+- Skenario generate `E:\tmp\eml\test.pst` dari nol dengan `E:\tmp\eml\test.pdf` menghasilkan hash SHA256 sama persis dengan `doc/Empty.pst`.
+- Tidak ada regresi pada test write/read yang sudah ada.
+
+## Plan 76 - 25 Feb 2026, 05:03
+Tanggal plan: 25 Feb 2026, 05:03
+
+**Ringkasan**
+Mengupdate writer agar bisa tulis/update properti store secara terpisah untuk `name`, `description`, dan `comment`.
+
+**Sumber**
+- Permintaan user update writer agar dapat menulis `name`, `description`, dan `comment` - 25 Feb 2026
+- Temuan Laporan 232: writer saat ini belum memisahkan store description (folder) vs store comment (message-store internal).
+
+**Lingkup**
+- src/Emcode.Pst.Libs/Domain/PstStorePropertiesDraft.cs
+- src/Emcode.Pst.Libs/Application/Abstractions/IPstWriter.cs
+- src/Emcode.Pst.Libs/Application/PstFile.cs
+- src/Emcode.Pst.Libs/Infrastructure/Ndb/PstNdbWriter.cs
+- src/Emcode.Pst.Libs/Infrastructure/PstInMemoryWriter.cs
+- tests/Emcode.Pst.Tests/PstNdbWriterIntegrationTests.cs
+- tests/Emcode.Pst.Tests/PstFileOpenTests.cs
+
+**Rencana Prioritas**
+1. Perluas draft store property:
+   - tambah field `Description` terpisah dari `Comment`.
+2. Update kontrak writer + facade:
+   - `UpdateStoreProperties` menerima model baru (`DisplayName`, `Description`, `Comment`) sync/async.
+3. Implementasi `PstNdbWriter`:
+   - `DisplayName` ditulis ke store name,
+   - `Description` ditulis ke store folder (`PidTagComment` folder),
+   - `Comment` ditulis ke message-store/internal node (`PidTagComment` message-store).
+4. Implementasi parity di `PstInMemoryWriter` dengan semantik field yang sama.
+5. Tambah test integrasi write/update:
+   - create-if-missing + set ketiga field,
+   - open existing + update ketiga field,
+   - reopen dan verifikasi pembacaan sama.
+6. Jalankan test terfokus store read/write + baseline `Empty.pst` untuk validasi no-regression.
+
+**Kriteria Selesai**
+- Writer bisa tulis/update `name`, `description`, `comment` secara terpisah.
+- Hasil read setelah write menunjukkan pemetaan field benar.
+- Test terkait lulus.
+## Plan 75 - 25 Feb 2026, 04:48
+Tanggal plan: 25 Feb 2026, 04:48
+
+**Ringkasan**
+Memperbaiki pembacaan message pada baseline `doc/Empty.pst` agar properti berikut terbaca benar:
+- from: `email@contoso.com`
+- to: `email2@contoso.com`
+- subject: `Test Empty`
+- attachment: `test.pdf` (46495 bytes)
+- body: `Test Empty`
+
+**Sumber**
+- Permintaan user validasi dan perbaikan baca property message pada `doc/Empty.pst` - 25 Feb 2026
+- Hasil cek runtime terbaru:
+  - subject terbaca `\u0001\u0001Test Empty`
+  - body terbaca HTML penuh
+  - sender/recipient kosong
+  - attachment belum terbaca
+
+**Lingkup**
+- src/Emcode.Pst.Libs/Infrastructure/PstNdbReader.cs
+- src/Emcode.Pst.Libs/Domain/PstMessage.cs (jika perlu field tampilan from/to tambahan)
+- src/Emcode.Pst.Libs/Domain/PstAttachment.cs (jika perlu normalisasi metadata)
+- tests/Emcode.Pst.Tests/PstFileOpenTests.cs (test baseline empty message)
+- tests/Emcode.Pst.Tests/** (test parser recipient/attachment terkait)
+
+**Rencana Prioritas**
+1. Investigasi source properti message pada node message (`NormalMessage`) di `Empty.pst`:
+   - validasi prop tag subject/body/text/html,
+   - validasi source sender (`PidTagSenderEmailAddress`, `PidTagSenderSmtpAddress`, atau properti lain setara),
+   - validasi source recipient table,
+   - validasi source attachment table/subnode.
+2. Perbaiki normalisasi subject:
+   - buang prefix control non-printable (contoh `\u0001\u0001`) secara aman.
+3. Perbaiki strategi body:
+   - prioritaskan `PidTagBody` plain text bila ada,
+   - fallback parse HTML ke teks bersih jika plain text kosong.
+4. Perbaiki mapping sender/recipient:
+   - pastikan field email sender terisi dari sumber yang tersedia,
+   - pastikan recipient table terbaca untuk `to`.
+5. Perbaiki mapping attachment:
+   - pastikan attachment table terbaca,
+   - nama file dan ukuran konten (`ReadContentBytes().Length`) konsisten terhadap baseline (46495).
+6. Tambahkan test baseline `doc/Empty.pst` untuk assert properti message sesuai target.
+7. Jalankan test terfokus reader + test baseline baru.
+
+**Kriteria Selesai**
+- Message pada folder `Test` di `doc/Empty.pst` terbaca dengan nilai:
+  - from `email@contoso.com`
+  - to `email2@contoso.com`
+  - subject `Test Empty`
+  - attachment `test.pdf` berukuran 46495 bytes
+  - body `Test Empty`
+- Tidak ada regresi pada test store/message yang sudah ada.
+## Plan 74 - 25 Feb 2026, 04:41
+Tanggal plan: 25 Feb 2026, 04:41
+
+**Ringkasan**
+Memperbaiki pembacaan properti store pada baseline `doc/empty.pst` agar `name`, `description`, dan `comment` terbaca ke field yang benar (tidak tertukar).
+
+**Sumber**
+- Permintaan user memperbaiki codebase agar pembacaan property pada `doc/empty.pst` benar - 25 Feb 2026
+- Hasil cek Laporan 223: name benar, tetapi comment terbaca sebagai description.
+
+**Lingkup**
+- src/Emcode.Pst.Libs/Infrastructure/PstNdbReader.cs
+- src/Emcode.Pst.Libs/Domain/PstFolder.cs (jika perlu field baru untuk description)
+- src/Emcode.Pst.Libs/Application/** (jika perlu penyesuaian kontrak publik)
+- tests/Emcode.Pst.Tests/PstFileOpenTests.cs
+- tests/Emcode.Pst.Tests/** (test tambahan mapping property store baseline)
+
+**Rencana Prioritas**
+1. Identifikasi property tag store untuk `description` dan `comment` pada message-store/internal node di `empty.pst`.
+2. Tambahkan pembacaan eksplisit kedua property tersebut (tanpa override saling menimpa).
+3. Sesuaikan mapping model domain:
+   - jika perlu, tambahkan field terpisah untuk `Description` agar tidak disimpan ke `Comment`.
+4. Terapkan fallback kompatibel:
+   - data lama tetap terbaca,
+   - baseline `empty.pst` menghasilkan nilai persis sesuai ekspektasi.
+5. Tambahkan/ubah test untuk memverifikasi:
+   - `name = empty@contoso.com`
+   - `description = this is description`
+   - `comment = this is comment`.
+6. Jalankan test terfokus reader/store-properties.
+
+**Kriteria Selesai**
+- Library membaca `name`, `description`, dan `comment` sesuai nilai baseline `doc/empty.pst`.
+- Tidak ada regresi pada pembacaan PST existing.
+- Test terkait lulus.
+## Plan 73 - 25 Feb 2026, 04:24
+Tanggal plan: 25 Feb 2026, 04:24
+
+**Ringkasan**
+Menambahkan pembacaan properti store dari node internal/message-store agar file PST buatan Outlook tetap terbaca benar untuk `name` dan `comment`.
+
+**Sumber**
+- Permintaan user lanjutan implementasi pembacaan store property dari internal/message-store - 25 Feb 2026
+- Hasil komparasi `SetProp.pst` vs `test.pst` pada Laporan 220
+
+**Lingkup**
+- src/Emcode.Pst.Libs/Infrastructure/PstNdbReader.cs
+- src/Emcode.Pst.Libs/Infrastructure/Ndb/NdbPrimitives.cs (jika perlu enum/helper NID)
+- src/Emcode.Pst.Libs/Domain/PstFolder.cs (hanya jika butuh metadata tambahan)
+- tests/Emcode.Pst.Tests/PstFileOpenTests.cs
+- tests/Emcode.Pst.Tests/PstNdbWriterIntegrationTests.cs (atau test reader baru setara)
+
+**Rencana Prioritas**
+1. Identifikasi node store non-folder pada NBT yang dipakai Outlook (tipe internal/message-store) beserta parent/relasi ke store folder.
+2. Tambahkan helper pembacaan properti store (`PidTagDisplayName` dan `PidTagComment`) dari node tersebut.
+3. Terapkan fallback berurutan di reader:
+   - prioritas 1: nilai pada node store internal/message-store,
+   - prioritas 2: nilai folder store (perilaku lama) jika nilai prioritas 1 tidak ada.
+4. Pastikan mapping hasil fallback tetap mengisi objek folder store yang diekspos API publik, tanpa mengubah kontrak publik existing.
+5. Tambahkan test regresi menggunakan PST baseline Outlook (`SetProp.pst`/fixture setara) untuk validasi nilai `name/comment` terbaca benar.
+6. Jalankan test terfokus reader + test terkait store property.
+
+**Kriteria Selesai**
+- PST buatan Outlook dengan store name/comment custom terbaca benar oleh API library.
+- Perilaku existing untuk PST buatan library tetap lolos (tidak regresi).
+- Test terkait pembacaan store property lulus.
+## Plan 72 - 24 Feb 2026, 16:38
+Tanggal plan: 24 Feb 2026, 16:38
+
+**Ringkasan**
+Menambahkan dukungan create/update property store PST (`name` dan `comment`) pada flow pembuatan PST baru maupun PST existing.
+
+**Sumber**
+- Permintaan user implementasi set `name` dan `comment` saat create PST, serta update untuk file PST existing - 24 Feb 2026
+
+**Lingkup**
+- src/Emcode.Pst.Libs/Application/Abstractions/IPstWriter.cs
+- src/Emcode.Pst.Libs/Application/PstFile.cs
+- src/Emcode.Pst.Libs/Domain/** (draft/model property store baru)
+- src/Emcode.Pst.Libs/Infrastructure/Ndb/PstNdbWriter.cs
+- src/Emcode.Pst.Libs/Infrastructure/PstInMemoryWriter.cs
+- tests/Emcode.Pst.Tests/** (test create + update store properties)
+
+**Rencana Prioritas**
+1. Tambahkan kontrak domain untuk property store:
+   - draft baru misal `PstStorePropertiesDraft` berisi minimal `DisplayName` dan `Comment`.
+2. Tambahkan API writer baru:
+   - `UpdateStoreProperties(PstStorePropertiesDraft draft)`
+   - `UpdateStorePropertiesAsync(..., CancellationToken)`
+3. Tambahkan facade di `PstFile`:
+   - method sync/async untuk update store properties.
+4. Implementasi `PstNdbWriter`:
+   - saat create PST baru, dapat set `name/comment` pada root/store node.
+   - saat open existing PST, update `name/comment` dan commit ke file.
+5. Implementasi `PstInMemoryWriter` agar parity API tetap terjaga.
+6. Tambah test integrasi:
+   - create-if-missing + set store `name/comment`.
+   - open existing PST + update store `name/comment`.
+   - reopen dan validasi nilai terbaca sesuai update.
+
+**Kriteria Selesai**
+- Ada API publik untuk set/update property store PST (`name`, `comment`).
+- Berlaku untuk file baru dan file existing.
+- Test terkait lulus.
+
+## Plan 71 - 24 Feb 2026, 15:45
+Tanggal plan: 24 Feb 2026, 15:45
+
+**Ringkasan**
+Memperbarui flow pembuatan PST (`CreateIfMissing` / bootstrap) agar mengikuti baseline PST Outlook dari `E:\tmp\eml\Blank.pst`, sehingga file hasil create dapat dibuka Outlook.
+
+**Sumber**
+- Permintaan user update codebase agar pembuatan PST mengikuti baseline `Blank.pst` - 24 Feb 2026
+- Hasil perbandingan `test.pst` vs `Blank.pst` pada Laporan 206
+
+**Lingkup**
+- src/Emcode.Pst.Libs/Infrastructure/Ndb/NdbHeaderWriter.cs
+- src/Emcode.Pst.Libs/Infrastructure/Ndb/PstBootstrapBuilder.cs
+- src/Emcode.Pst.Libs/Infrastructure/Ndb/PstNdbWriter.cs
+- src/Emcode.Pst.Libs/Infrastructure/Ndb/NdbWriter.cs
+- tests/Emcode.Pst.Tests/NdbHeaderWriterTests.cs
+- tests/Emcode.Pst.Tests/PstNdbWriterIntegrationTests.cs
+- tests/Emcode.Pst.Tests/** (test kompatibilitas baseline PST baru)
+
+**Rencana Prioritas**
+1. Samakan field header kritikal bootstrap dengan baseline Outlook:
+   - `ClientSignature` (`0x4D53`),
+   - `VersionMinor` sesuai baseline (23.19),
+   - `CryptMethod` default `Permute` untuk file baru.
+2. Samakan inisialisasi struktur folder sistem awal agar minimal setara baseline:
+   - `Root`,
+   - `Top of Outlook data file`,
+   - `Search Root`,
+   - `Deleted Items`,
+   - `IPM_COMMON_VIEWS`,
+   - folder sistem tambahan yang dibutuhkan struktur NID internal.
+3. Pastikan pointer/root metadata NDB konsisten setelah bootstrap:
+   - root BBT/NBT,
+   - allocation map state,
+   - `fAMapValid`,
+   - CRC header.
+4. Tambahkan validasi regresi berbasis baseline:
+   - test header field kritikal expected value,
+   - test jumlah/nama folder sistem minimum,
+   - test reopen PST hasil create lalu create 1 message.
+5. Jalankan test terfokus writer/bootstrap/integration untuk memastikan tidak ada regresi flow write.
+
+**Kriteria Selesai**
+- PST baru hasil `CreateIfMissing` bisa dibuka Outlook.
+- Header kritikal file baru selaras dengan baseline Outlook.
+- Struktur folder sistem minimum terbentuk konsisten.
+- Test kompatibilitas baseline lulus.
+
 ## Plan 70 - 24 Feb 2026, 15:06
 Tanggal plan: 24 Feb 2026, 15:06
 
@@ -2018,6 +2711,10 @@ Menyusun rencana dua tahap implementasi read dan write PST.
 
 **Kriteria Selesai**
 - Rencana dua tahap terdokumentasi.
+
+
+
+
 
 
 

@@ -13,6 +13,7 @@ namespace Emcode.Pst.Infrastructure.Ndb;
 /// </summary>
 internal sealed class NdbWriter
 {
+    private const string UnsafeReuseEnvName = "PST_NDB_ENABLE_UNSAFE_REUSE";
     private readonly Stream _stream;
     private readonly PstFormat _format;
     private readonly NdbWriterCore _core;
@@ -25,19 +26,36 @@ internal sealed class NdbWriter
     /// </summary>
     /// <param name="stream">Stream PST.</param>
     /// <param name="header">Header PST.</param>
+    /// <param name="existingBbtEntries">Snapshot entry BBT existing untuk proteksi reuse offset aktif.</param>
+    /// <param name="initialLastAmapOffset">Nilai awal ROOT.ibAMapLast.</param>
     /// <param name="initialBlockBidCounter">Counter awal BID block untuk melanjutkan alokasi.</param>
     /// <param name="initialPageBidCounter">Counter awal BID page untuk melanjutkan alokasi.</param>
     /// <param name="initialOffset">Offset awal untuk alokasi block; default memakai ukuran file.</param>
+    /// <param name="enableFreeSpaceReuse">Mengaktifkan alokasi reuse berbasis AMap (eksperimental/unsafe).</param>
     public NdbWriter(
         Stream stream,
         PstHeaderInfo header,
+        IReadOnlyCollection<BbtEntry>? existingBbtEntries = null,
+        ulong initialLastAmapOffset = 0,
         ulong? initialBlockBidCounter = null,
         ulong? initialPageBidCounter = null,
-        ulong? initialOffset = null)
+        ulong? initialOffset = null,
+        bool? enableFreeSpaceReuse = null)
     {
         _stream = stream ?? throw new ArgumentNullException(nameof(stream));
         _format = header.Format;
-        _core = new NdbWriterCore(header, initialOffset, initialBlockBidCounter, initialPageBidCounter);
+        var reuseEnabled = enableFreeSpaceReuse ?? IsUnsafeReuseEnabledFromEnvironment();
+        var freeRanges = reuseEnabled
+            ? NdbAllocationMapWriter.ReadReusableFreeRanges(_stream, initialLastAmapOffset)
+            : Array.Empty<NdbAllocationRange>();
+        var occupiedRanges = BuildOccupiedRanges(existingBbtEntries, header.Format);
+        _core = new NdbWriterCore(
+            header,
+            initialOffset,
+            initialBlockBidCounter,
+            initialPageBidCounter,
+            freeRanges,
+            occupiedRanges);
         _blockWriter = new NdbBlockWriter(_stream, _core, header.CryptMethod);
     }
 
@@ -315,5 +333,34 @@ internal sealed class NdbWriter
         }
 
         _allocationTransactionStarted = true;
+    }
+
+    private static IReadOnlyList<NdbAllocationRange> BuildOccupiedRanges(IReadOnlyCollection<BbtEntry>? entries, PstFormat format)
+    {
+        if (entries is null || entries.Count == 0)
+        {
+            return Array.Empty<NdbAllocationRange>();
+        }
+
+        var blockSize = format == PstFormat.Unicode ? 8192UL : 512UL;
+        var ranges = new List<NdbAllocationRange>(entries.Count);
+        foreach (var entry in entries)
+        {
+            if (entry is null || entry.Ib == 0)
+            {
+                continue;
+            }
+
+            ranges.Add(new NdbAllocationRange(entry.Ib, blockSize));
+        }
+
+        return ranges;
+    }
+
+    private static bool IsUnsafeReuseEnabledFromEnvironment()
+    {
+        var raw = Environment.GetEnvironmentVariable(UnsafeReuseEnvName);
+        return string.Equals(raw, "1", StringComparison.OrdinalIgnoreCase)
+            || string.Equals(raw, "true", StringComparison.OrdinalIgnoreCase);
     }
 }

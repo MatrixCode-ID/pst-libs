@@ -58,4 +58,37 @@ public sealed class NdbWriterCoreTests
         Assert.False(allocation.Bid.IsInternal);
         Assert.Equal((ushort)512, allocation.BlockSize);
     }
+
+    /// <summary>
+    /// Memastikan allocator memprioritaskan free-space reuse sebelum append ke EOF.
+    /// </summary>
+    [Fact]
+    public void AllocateExternalBlock_ShouldReuseFreeRangeBeforeEof()
+    {
+        var header = new PstHeaderInfo(0, 0, 0, 0, 4_194_304, PstFormat.Unicode, PstCryptMethod.None);
+        var freeRanges = new[] { new NdbAllocationRange(0x0004_4000, 32_768) };
+        var writer = new NdbWriterCore(header, freeRanges: freeRanges);
+
+        var first = writer.AllocateExternalBlock(100);
+        var second = writer.AllocateExternalBlock(100);
+
+        Assert.Equal(0x0004_4000UL, first.Ib);
+        Assert.Equal(0x0004_6000UL, second.Ib);
+    }
+
+    /// <summary>
+    /// Memastikan range occupied tidak dipakai walaupun muncul sebagai free-range candidate.
+    /// </summary>
+    [Fact]
+    public void AllocateExternalBlock_ShouldSkipOccupiedRange()
+    {
+        var header = new PstHeaderInfo(0, 0, 0, 0, 4_194_304, PstFormat.Unicode, PstCryptMethod.None);
+        var freeRanges = new[] { new NdbAllocationRange(0x0004_4000, 32_768) };
+        var occupiedRanges = new[] { new NdbAllocationRange(0x0004_6000, 8_192) };
+        var writer = new NdbWriterCore(header, freeRanges: freeRanges, occupiedRanges: occupiedRanges);
+
+        var allocation = writer.AllocateExternalBlock(100);
+
+        Assert.Equal(0x0004_4000UL, allocation.Ib);
+    }
 }

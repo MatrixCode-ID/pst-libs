@@ -18,7 +18,12 @@ namespace Emcode.Pst.Infrastructure;
 /// </summary>
 public sealed class PstNdbReader : IPstReader
 {
+    private const string DefaultStoreFolderName = "Top of Outlook data file";
+    private const string SearchRootFolderName = "Search Root";
+    private const uint MessageStoreNidValue = 0x00000021;
+    private const uint StoreFolderNidValue = 0x00008022;
     private const ushort PidTagDisplayName = 0x3001;
+    private const ushort PidTagComment = 0x3004;
     private const ushort PidTagMessageClass = 0x001A;
     private const ushort PidTagSubject = 0x0037;
     private const ushort PidTagNormalizedSubject = 0x0E1D;
@@ -104,6 +109,7 @@ public sealed class PstNdbReader : IPstReader
             bbtEntries);
         var folderMap = BuildFolders(nbtEntries, blockReader, header.HeaderInfo.Format);
         var rootChildren = BuildHierarchy(folderMap, nbtEntries, blockReader, header.HeaderInfo.Format);
+        ApplyStorePropertiesFromMessageStore(folderMap, rootChildren, nbtEntries, blockReader, header.HeaderInfo.Format);
         BuildMessages(nbtEntries, folderMap, blockReader, header.HeaderInfo.Format, attachmentProvider);
 
         var root = new PstFolder("root", "Root")
@@ -154,6 +160,8 @@ public sealed class PstNdbReader : IPstReader
             bbtEntries);
         var folderMap = await BuildFoldersAsync(nbtEntries, blockReader, header.HeaderInfo.Format, cancellationToken).ConfigureAwait(false);
         var rootChildren = await BuildHierarchyAsync(folderMap, nbtEntries, blockReader, header.HeaderInfo.Format, cancellationToken)
+            .ConfigureAwait(false);
+        await ApplyStorePropertiesFromMessageStoreAsync(folderMap, rootChildren, nbtEntries, blockReader, header.HeaderInfo.Format, cancellationToken)
             .ConfigureAwait(false);
         await BuildMessagesAsync(nbtEntries, folderMap, blockReader, header.HeaderInfo.Format, attachmentProvider, cancellationToken)
             .ConfigureAwait(false);
@@ -230,6 +238,13 @@ public sealed class PstNdbReader : IPstReader
                 folder.Name = name;
             }
 
+            var comment = pc.GetString(PidTagComment);
+            if (comment is not null)
+            {
+                folder.Description = comment;
+                folder.Comment = comment;
+            }
+
             folderMap[entry.Nid.Value] = folder;
         }
 
@@ -265,6 +280,13 @@ public sealed class PstNdbReader : IPstReader
             if (!string.IsNullOrWhiteSpace(name))
             {
                 folder.Name = name;
+            }
+
+            var comment = pc.GetString(PidTagComment);
+            if (comment is not null)
+            {
+                folder.Description = comment;
+                folder.Comment = comment;
             }
 
             folderMap[entry.Nid.Value] = folder;
@@ -366,6 +388,327 @@ public sealed class PstNdbReader : IPstReader
 
         return rootChildren;
     }
+
+    /// <summary>
+    /// Mengaplikasikan properti store dari node internal/message-store ke folder store utama bila nilai folder masih default.
+    /// </summary>
+    /// <param name="folderMap">Map folder hasil parsing.</param>
+    /// <param name="rootChildren">Daftar child pada root virtual.</param>
+    /// <param name="nbtEntries">Entri NBT.</param>
+    /// <param name="blockReader">Reader blok data.</param>
+    /// <param name="format">Format PST.</param>
+    private static void ApplyStorePropertiesFromMessageStore(
+        IDictionary<uint, PstFolder> folderMap,
+        IReadOnlyList<PstFolder> rootChildren,
+        IReadOnlyDictionary<uint, NbtEntry> nbtEntries,
+        PstBlockReader blockReader,
+        PstFormat format)
+    {
+        var storeProperties = TryReadStorePropertiesFromMessageStore(nbtEntries, blockReader, format);
+        if (!storeProperties.HasValue)
+        {
+            return;
+        }
+
+        var storeFolder = ResolveStoreFolderCandidate(folderMap, rootChildren, nbtEntries);
+        if (storeFolder is null)
+        {
+            return;
+        }
+
+        var snapshot = storeProperties.Value;
+        if (!string.IsNullOrWhiteSpace(snapshot.DisplayName) &&
+            (string.IsNullOrWhiteSpace(storeFolder.Name) ||
+             string.Equals(storeFolder.Name, DefaultStoreFolderName, StringComparison.OrdinalIgnoreCase)))
+        {
+            storeFolder.Name = snapshot.DisplayName;
+        }
+
+        if (!string.IsNullOrWhiteSpace(snapshot.Comment))
+        {
+            storeFolder.Comment = snapshot.Comment;
+        }
+    }
+
+    /// <summary>
+    /// Mengaplikasikan properti store dari node internal/message-store secara asynchronous.
+    /// </summary>
+    /// <param name="folderMap">Map folder hasil parsing.</param>
+    /// <param name="rootChildren">Daftar child pada root virtual.</param>
+    /// <param name="nbtEntries">Entri NBT.</param>
+    /// <param name="blockReader">Reader blok data.</param>
+    /// <param name="format">Format PST.</param>
+    /// <param name="cancellationToken">Token pembatalan operasi.</param>
+    private static async Task ApplyStorePropertiesFromMessageStoreAsync(
+        IDictionary<uint, PstFolder> folderMap,
+        IReadOnlyList<PstFolder> rootChildren,
+        IReadOnlyDictionary<uint, NbtEntry> nbtEntries,
+        PstBlockReader blockReader,
+        PstFormat format,
+        CancellationToken cancellationToken)
+    {
+        var storeProperties = await TryReadStorePropertiesFromMessageStoreAsync(nbtEntries, blockReader, format, cancellationToken)
+            .ConfigureAwait(false);
+        if (!storeProperties.HasValue)
+        {
+            return;
+        }
+
+        var storeFolder = ResolveStoreFolderCandidate(folderMap, rootChildren, nbtEntries);
+        if (storeFolder is null)
+        {
+            return;
+        }
+
+        var snapshot = storeProperties.Value;
+        if (!string.IsNullOrWhiteSpace(snapshot.DisplayName) &&
+            (string.IsNullOrWhiteSpace(storeFolder.Name) ||
+             string.Equals(storeFolder.Name, DefaultStoreFolderName, StringComparison.OrdinalIgnoreCase)))
+        {
+            storeFolder.Name = snapshot.DisplayName;
+        }
+
+        if (!string.IsNullOrWhiteSpace(snapshot.Comment))
+        {
+            storeFolder.Comment = snapshot.Comment;
+        }
+    }
+
+    /// <summary>
+    /// Mengambil properti store dari node internal/message-store bila tersedia.
+    /// </summary>
+    /// <param name="nbtEntries">Entri NBT.</param>
+    /// <param name="blockReader">Reader blok data.</param>
+    /// <param name="format">Format PST.</param>
+    /// <returns>Snapshot properti store atau null.</returns>
+    private static StorePropertiesSnapshot? TryReadStorePropertiesFromMessageStore(
+        IReadOnlyDictionary<uint, NbtEntry> nbtEntries,
+        PstBlockReader blockReader,
+        PstFormat format)
+    {
+        if (nbtEntries.TryGetValue(MessageStoreNidValue, out var messageStoreEntry))
+        {
+            var direct = TryReadStoreProperties(messageStoreEntry, blockReader, format);
+            if (direct.HasValue)
+            {
+                return direct;
+            }
+        }
+
+        foreach (var entry in nbtEntries.Values)
+        {
+            if (entry.Nid.Type != NidType.Internal || entry.Nid.Value == MessageStoreNidValue)
+            {
+                continue;
+            }
+
+            var candidate = TryReadStoreProperties(entry, blockReader, format);
+            if (candidate.HasValue)
+            {
+                return candidate;
+            }
+        }
+
+        return null;
+    }
+
+    /// <summary>
+    /// Mengambil properti store dari node internal/message-store secara asynchronous.
+    /// </summary>
+    /// <param name="nbtEntries">Entri NBT.</param>
+    /// <param name="blockReader">Reader blok data.</param>
+    /// <param name="format">Format PST.</param>
+    /// <param name="cancellationToken">Token pembatalan operasi.</param>
+    /// <returns>Snapshot properti store atau null.</returns>
+    private static async Task<StorePropertiesSnapshot?> TryReadStorePropertiesFromMessageStoreAsync(
+        IReadOnlyDictionary<uint, NbtEntry> nbtEntries,
+        PstBlockReader blockReader,
+        PstFormat format,
+        CancellationToken cancellationToken)
+    {
+        if (nbtEntries.TryGetValue(MessageStoreNidValue, out var messageStoreEntry))
+        {
+            var direct = await TryReadStorePropertiesAsync(messageStoreEntry, blockReader, format, cancellationToken).ConfigureAwait(false);
+            if (direct.HasValue)
+            {
+                return direct;
+            }
+        }
+
+        foreach (var entry in nbtEntries.Values)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            if (entry.Nid.Type != NidType.Internal || entry.Nid.Value == MessageStoreNidValue)
+            {
+                continue;
+            }
+
+            var candidate = await TryReadStorePropertiesAsync(entry, blockReader, format, cancellationToken).ConfigureAwait(false);
+            if (candidate.HasValue)
+            {
+                return candidate;
+            }
+        }
+
+        return null;
+    }
+
+    /// <summary>
+    /// Mencoba membaca display name/comment dari satu entry NBT.
+    /// </summary>
+    /// <param name="entry">Entri NBT target.</param>
+    /// <param name="blockReader">Reader blok data.</param>
+    /// <param name="format">Format PST.</param>
+    /// <returns>Snapshot properti store atau null.</returns>
+    private static StorePropertiesSnapshot? TryReadStoreProperties(
+        NbtEntry entry,
+        PstBlockReader blockReader,
+        PstFormat format)
+    {
+        try
+        {
+            var pc = CreatePropertyContext(entry, blockReader, format);
+            var displayName = pc.GetString(PidTagDisplayName);
+            var comment = pc.GetString(PidTagComment);
+            if (string.IsNullOrWhiteSpace(displayName) && string.IsNullOrWhiteSpace(comment))
+            {
+                return null;
+            }
+
+            return new StorePropertiesSnapshot(displayName, comment);
+        }
+        catch (InvalidDataException)
+        {
+            return null;
+        }
+        catch (ArgumentException)
+        {
+            return null;
+        }
+    }
+
+    /// <summary>
+    /// Mencoba membaca display name/comment dari satu entry NBT secara asynchronous.
+    /// </summary>
+    /// <param name="entry">Entri NBT target.</param>
+    /// <param name="blockReader">Reader blok data.</param>
+    /// <param name="format">Format PST.</param>
+    /// <param name="cancellationToken">Token pembatalan operasi.</param>
+    /// <returns>Snapshot properti store atau null.</returns>
+    private static async Task<StorePropertiesSnapshot?> TryReadStorePropertiesAsync(
+        NbtEntry entry,
+        PstBlockReader blockReader,
+        PstFormat format,
+        CancellationToken cancellationToken)
+    {
+        try
+        {
+            var pc = await CreatePropertyContextAsync(entry, blockReader, format, cancellationToken).ConfigureAwait(false);
+            var displayName = pc.GetString(PidTagDisplayName);
+            var comment = pc.GetString(PidTagComment);
+            if (string.IsNullOrWhiteSpace(displayName) && string.IsNullOrWhiteSpace(comment))
+            {
+                return null;
+            }
+
+            return new StorePropertiesSnapshot(displayName, comment);
+        }
+        catch (InvalidDataException)
+        {
+            return null;
+        }
+        catch (ArgumentException)
+        {
+            return null;
+        }
+    }
+
+    /// <summary>
+    /// Menentukan folder store utama yang akan menerima fallback properti store.
+    /// </summary>
+    /// <param name="folderMap">Map folder.</param>
+    /// <param name="rootChildren">Daftar child root virtual.</param>
+    /// <param name="nbtEntries">Entri NBT.</param>
+    /// <returns>Folder store kandidat atau null.</returns>
+    private static PstFolder? ResolveStoreFolderCandidate(
+        IDictionary<uint, PstFolder> folderMap,
+        IReadOnlyList<PstFolder> rootChildren,
+        IReadOnlyDictionary<uint, NbtEntry> nbtEntries)
+    {
+        if (folderMap.TryGetValue(StoreFolderNidValue, out var storeByFixedNid))
+        {
+            return storeByFixedNid;
+        }
+
+        foreach (var folder in folderMap.Values)
+        {
+            if (string.Equals(folder.Name, DefaultStoreFolderName, StringComparison.OrdinalIgnoreCase))
+            {
+                return folder;
+            }
+        }
+
+        var searchRoot = folderMap.Values.FirstOrDefault(
+            folder => string.Equals(folder.Name, SearchRootFolderName, StringComparison.OrdinalIgnoreCase));
+        if (searchRoot is not null && TryParseFolderNid(searchRoot.Id, out var searchNid) &&
+            nbtEntries.TryGetValue(searchNid, out var searchEntry) &&
+            !searchEntry.NidParent.IsZero &&
+            folderMap.TryGetValue(searchEntry.NidParent.Value, out var parentFolder))
+        {
+            return parentFolder;
+        }
+
+        foreach (var folder in folderMap.Values)
+        {
+            if (folder.SubFolders.Any(child => string.Equals(child.Name, SearchRootFolderName, StringComparison.OrdinalIgnoreCase)))
+            {
+                return folder;
+            }
+        }
+
+        if (rootChildren.Count > 0)
+        {
+            var firstRootChild = rootChildren[0];
+            if (firstRootChild.SubFolders.Count > 0)
+            {
+                var bySearchRoot = firstRootChild.SubFolders.FirstOrDefault(
+                    child => string.Equals(child.Name, SearchRootFolderName, StringComparison.OrdinalIgnoreCase));
+                if (bySearchRoot is not null && TryParseFolderNid(bySearchRoot.Id, out var searchRootNid) &&
+                    nbtEntries.TryGetValue(searchRootNid, out var searchRootEntry) &&
+                    !searchRootEntry.NidParent.IsZero &&
+                    folderMap.TryGetValue(searchRootEntry.NidParent.Value, out var parentFromRootChild))
+                {
+                    return parentFromRootChild;
+                }
+            }
+        }
+
+        return folderMap.Values.FirstOrDefault();
+    }
+
+    /// <summary>
+    /// Mengurai string NID folder dalam format hex (`0xXXXXXXXX`) menjadi uint.
+    /// </summary>
+    /// <param name="value">Nilai id folder.</param>
+    /// <param name="nidValue">Output NID.</param>
+    /// <returns>True jika parse berhasil.</returns>
+    private static bool TryParseFolderNid(string value, out uint nidValue)
+    {
+        nidValue = 0;
+        if (string.IsNullOrWhiteSpace(value) || !value.StartsWith("0x", StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        return uint.TryParse(value.AsSpan(2), System.Globalization.NumberStyles.HexNumber, null, out nidValue);
+    }
+
+    /// <summary>
+    /// Snapshot properti store yang dibaca dari node internal/message-store.
+    /// </summary>
+    /// <param name="DisplayName">Nama store.</param>
+    /// <param name="Comment">Komentar store.</param>
+    private readonly record struct StorePropertiesSnapshot(string? DisplayName, string? Comment);
 
     /// <summary>
     /// Membangun relasi parent-child folder secara asynchronous dengan urutan dari hierarchy table.
@@ -999,7 +1342,7 @@ public sealed class PstNdbReader : IPstReader
             var subject = pc.GetString(PidTagSubject) ?? pc.GetString(PidTagNormalizedSubject);
             if (!string.IsNullOrWhiteSpace(subject))
             {
-                message.Subject = subject;
+                message.Subject = NormalizeSubject(subject);
             }
 
             var messageClass = pc.GetString(PidTagMessageClass);
@@ -1181,7 +1524,23 @@ public sealed class PstNdbReader : IPstReader
                 message.ConversationIndex = conversationIndex.Value;
             }
 
+            if (string.IsNullOrWhiteSpace(message.SenderEmailAddress))
+            {
+                message.SenderEmailAddress = message.SentRepresentingEmailAddress;
+            }
+
+            if (string.IsNullOrWhiteSpace(message.SenderSmtpAddress))
+            {
+                message.SenderSmtpAddress = message.SentRepresentingEmailAddress;
+            }
+
+            if (string.IsNullOrWhiteSpace(message.SenderName))
+            {
+                message.SenderName = message.SentRepresentingName ?? message.SenderEmailAddress;
+            }
+
             PopulateRecipientsAndAttachments(message, subnodes, blockReader, format, attachmentProvider);
+            PopulateRecipientsFallbackFromDisplayFields(message);
         }
         catch (InvalidDataException)
         {
@@ -1217,7 +1576,7 @@ public sealed class PstNdbReader : IPstReader
             var subject = pc.GetString(PidTagSubject) ?? pc.GetString(PidTagNormalizedSubject);
             if (!string.IsNullOrWhiteSpace(subject))
             {
-                message.Subject = subject;
+                message.Subject = NormalizeSubject(subject);
             }
 
             var messageClass = pc.GetString(PidTagMessageClass);
@@ -1399,7 +1758,23 @@ public sealed class PstNdbReader : IPstReader
                 message.ConversationIndex = conversationIndex.Value;
             }
 
+            if (string.IsNullOrWhiteSpace(message.SenderEmailAddress))
+            {
+                message.SenderEmailAddress = message.SentRepresentingEmailAddress;
+            }
+
+            if (string.IsNullOrWhiteSpace(message.SenderSmtpAddress))
+            {
+                message.SenderSmtpAddress = message.SentRepresentingEmailAddress;
+            }
+
+            if (string.IsNullOrWhiteSpace(message.SenderName))
+            {
+                message.SenderName = message.SentRepresentingName ?? message.SenderEmailAddress;
+            }
+
             PopulateRecipientsAndAttachments(message, subnodes, blockReader, format, attachmentProvider);
+            PopulateRecipientsFallbackFromDisplayFields(message);
         }
         catch (InvalidDataException)
         {
@@ -1492,31 +1867,43 @@ public sealed class PstNdbReader : IPstReader
 
         foreach (var entry in subnodes.EnumerateSubnodes())
         {
-            var blocks = blockReader.ReadDataBlocks(entry.Value.BidData);
-            if (blocks.Count == 0)
+            try
             {
-                continue;
-            }
+                var blocks = blockReader.ReadDataBlocks(entry.Value.BidData);
+                if (blocks.Count == 0)
+                {
+                    continue;
+                }
 
-            var tableHeap = new HeapOnNode(blocks);
-            var tableSubnodes = new SubnodeReader(blockReader, format, entry.Value.BidSub);
-            var tableContext = new TableContext(tableHeap, tableSubnodes);
-            var columns = tableContext.ReadColumns();
-            if (columns.Count == 0)
-            {
-                continue;
-            }
+                var tableHeap = new HeapOnNode(blocks);
+                var tableSubnodes = new SubnodeReader(blockReader, format, entry.Value.BidSub);
+                var tableContext = new TableContext(tableHeap, tableSubnodes);
+                var columns = tableContext.ReadColumns();
+                if (columns.Count == 0)
+                {
+                    continue;
+                }
 
-            if (IsRecipientTable(columns))
-            {
-                recipients.AddRange(ReadRecipients(tableContext));
-                continue;
-            }
+                if (IsRecipientTable(columns))
+                {
+                    recipients.AddRange(ReadRecipients(tableContext));
+                    continue;
+                }
 
-            if (IsAttachmentTable(columns))
-            {
-                attachments.AddRange(ReadAttachments(tableContext));
+                if (IsAttachmentTable(columns))
+                {
+                    attachments.AddRange(ReadAttachments(tableContext));
+                }
             }
+            catch (InvalidDataException)
+            {
+                // Abaikan subnode non-table agar parsing recipient/attachment lain tetap berjalan.
+            }
+        }
+
+        if (attachments.Count == 0)
+        {
+            attachments.AddRange(ReadAttachmentsFromAttachmentSubnodes(subnodes, blockReader, format));
         }
 
         if (attachmentProvider is not null)
@@ -1529,6 +1916,67 @@ public sealed class PstNdbReader : IPstReader
     }
 
     /// <summary>
+    /// Membaca fallback attachment langsung dari subnode bertipe Attachment bila attachment table tidak tersedia/invalid.
+    /// </summary>
+    /// <param name="subnodes">Subnode reader message.</param>
+    /// <param name="blockReader">Reader blok data.</param>
+    /// <param name="format">Format PST.</param>
+    /// <returns>Daftar attachment fallback.</returns>
+    private static IReadOnlyList<PstAttachment> ReadAttachmentsFromAttachmentSubnodes(
+        SubnodeReader subnodes,
+        PstBlockReader blockReader,
+        PstFormat format)
+    {
+        var attachments = new List<PstAttachment>();
+
+        foreach (var entry in subnodes.EnumerateSubnodes())
+        {
+            if (entry.Key.Type != NidType.Attachment || entry.Value.BidData.IsZero)
+            {
+                continue;
+            }
+
+            try
+            {
+                var blocks = blockReader.ReadDataBlocks(entry.Value.BidData);
+                if (blocks.Count == 0)
+                {
+                    continue;
+                }
+
+                var heap = new HeapOnNode(blocks);
+                var nestedSubnodes = new SubnodeReader(blockReader, format, entry.Value.BidSub);
+                var pc = new PropertyContext(heap, nestedSubnodes);
+
+                var attachment = new PstAttachment
+                {
+                    AttachNumber = pc.GetInt32(PidTagAttachNumber) ?? (int)entry.Key.Index,
+                    FileName = pc.GetString(PidTagAttachFilename),
+                    LongFileName = pc.GetString(PidTagAttachLongFilename),
+                    Size = pc.GetInt32(PidTagAttachSize),
+                    MimeTag = pc.GetString(PidTagAttachMimeTag),
+                    ContentId = pc.GetString(PidTagAttachContentId),
+                    AttachMethod = pc.GetInt32(PidTagAttachMethod)
+                };
+
+                if (attachment.AttachNumber.HasValue || !string.IsNullOrWhiteSpace(attachment.FileName) ||
+                    !string.IsNullOrWhiteSpace(attachment.LongFileName) || attachment.Size.HasValue ||
+                    !string.IsNullOrWhiteSpace(attachment.MimeTag) || !string.IsNullOrWhiteSpace(attachment.ContentId) ||
+                    attachment.AttachMethod.HasValue)
+                {
+                    attachments.Add(attachment);
+                }
+            }
+            catch (InvalidDataException)
+            {
+                // Abaikan subnode attachment yang tidak valid.
+            }
+        }
+
+        return attachments;
+    }
+
+    /// <summary>
     /// Menentukan apakah table context adalah recipient table.
     /// </summary>
     /// <param name="columns">Daftar kolom table.</param>
@@ -1537,7 +1985,7 @@ public sealed class PstNdbReader : IPstReader
     {
         foreach (var column in columns)
         {
-            if (column.PropId == PidTagRecipientType)
+            if (ColumnMatchesPropertyId(column, PidTagRecipientType))
             {
                 return true;
             }
@@ -1555,7 +2003,7 @@ public sealed class PstNdbReader : IPstReader
     {
         foreach (var column in columns)
         {
-            if (column.PropId == PidTagAttachMethod || column.PropId == PidTagAttachNumber)
+            if (ColumnMatchesPropertyId(column, PidTagAttachMethod) || ColumnMatchesPropertyId(column, PidTagAttachNumber))
             {
                 return true;
             }
@@ -1738,8 +2186,8 @@ public sealed class PstNdbReader : IPstReader
     private static bool TryGetRowString(TableContext.TableRow row, ushort propId, out string value)
     {
         value = string.Empty;
-        if (row.TryGetValue(MakePropertyTag(propId, PstPropertyType.String), out var cell) ||
-            row.TryGetValue(MakePropertyTag(propId, PstPropertyType.String8), out cell))
+        if (TryGetRowCell(row, propId, PstPropertyType.String, out var cell) ||
+            TryGetRowCell(row, propId, PstPropertyType.String8, out cell))
         {
             value = DecodeString(cell.PropType, cell.Data);
             return !string.IsNullOrWhiteSpace(value);
@@ -1758,7 +2206,7 @@ public sealed class PstNdbReader : IPstReader
     private static bool TryGetRowInt32(TableContext.TableRow row, ushort propId, out int value)
     {
         value = 0;
-        if (!row.TryGetValue(MakePropertyTag(propId, PstPropertyType.Integer32), out var cell))
+        if (!TryGetRowCell(row, propId, PstPropertyType.Integer32, out var cell))
         {
             return false;
         }
@@ -1782,7 +2230,7 @@ public sealed class PstNdbReader : IPstReader
     private static bool TryGetRowBoolean(TableContext.TableRow row, ushort propId, out bool value)
     {
         value = false;
-        if (!row.TryGetValue(MakePropertyTag(propId, PstPropertyType.Boolean), out var cell))
+        if (!TryGetRowCell(row, propId, PstPropertyType.Boolean, out var cell))
         {
             return false;
         }
@@ -1806,7 +2254,7 @@ public sealed class PstNdbReader : IPstReader
     private static bool TryGetRowDateTime(TableContext.TableRow row, ushort propId, out DateTimeOffset value)
     {
         value = default;
-        if (!row.TryGetValue(MakePropertyTag(propId, PstPropertyType.Time), out var cell))
+        if (!TryGetRowCell(row, propId, PstPropertyType.Time, out var cell))
         {
             return false;
         }
@@ -1831,7 +2279,7 @@ public sealed class PstNdbReader : IPstReader
     private static bool TryGetRowBinary(TableContext.TableRow row, ushort propId, out ReadOnlyMemory<byte> value)
     {
         value = ReadOnlyMemory<byte>.Empty;
-        if (!row.TryGetValue(MakePropertyTag(propId, PstPropertyType.Binary), out var cell))
+        if (!TryGetRowCell(row, propId, PstPropertyType.Binary, out var cell))
         {
             return false;
         }
@@ -1859,6 +2307,117 @@ public sealed class PstNdbReader : IPstReader
         }
 
         return Encoding.Latin1.GetString(data.Span).TrimEnd('\0');
+    }
+
+    /// <summary>
+    /// Mengambil cell row dengan dukungan dua orientasi property tag (standar writer internal dan baseline Outlook).
+    /// </summary>
+    /// <param name="row">Row table context.</param>
+    /// <param name="propId">Property id.</param>
+    /// <param name="propType">Property type.</param>
+    /// <param name="cell">Cell hasil.</param>
+    /// <returns>True jika cell ditemukan.</returns>
+    private static bool TryGetRowCell(TableContext.TableRow row, ushort propId, PstPropertyType propType, out TableContext.TableCellValue cell)
+    {
+        return row.TryGetValue(MakePropertyTag(propId, propType), out cell) ||
+               row.TryGetValue(MakePropertyTagAlt(propId, propType), out cell);
+    }
+
+    /// <summary>
+    /// Membuat property tag orientasi alternatif (propId pada 16-bit atas) untuk kompatibilitas baseline Outlook.
+    /// </summary>
+    /// <param name="propId">Property id.</param>
+    /// <param name="propType">Property type.</param>
+    /// <returns>Property tag alternatif.</returns>
+    private static uint MakePropertyTagAlt(ushort propId, PstPropertyType propType)
+    {
+        return ((uint)propId << 16) | (ushort)propType;
+    }
+
+    /// <summary>
+    /// Menentukan apakah kolom table mereferensikan property id tertentu pada salah satu orientasi tag.
+    /// </summary>
+    /// <param name="column">Kolom table.</param>
+    /// <param name="propId">Property id target.</param>
+    /// <returns>True jika cocok.</returns>
+    private static bool ColumnMatchesPropertyId(TableContext.TableColumn column, ushort propId)
+    {
+        return column.PropId == propId || column.PropType == propId;
+    }
+
+    /// <summary>
+    /// Menormalkan subject dengan menghapus prefix karakter kontrol non-printable di awal string.
+    /// </summary>
+    /// <param name="subject">Nilai subject mentah.</param>
+    /// <returns>Subject yang sudah dinormalkan.</returns>
+    private static string NormalizeSubject(string subject)
+    {
+        if (string.IsNullOrEmpty(subject))
+        {
+            return subject;
+        }
+
+        var index = 0;
+        while (index < subject.Length && char.IsControl(subject[index]))
+        {
+            index++;
+        }
+
+        return index == 0 ? subject : subject[index..];
+    }
+
+    /// <summary>
+    /// Membuat fallback recipient dari display fields (To/Cc/Bcc) bila recipient table tidak tersedia.
+    /// </summary>
+    /// <param name="message">Message target.</param>
+    private static void PopulateRecipientsFallbackFromDisplayFields(PstMessage message)
+    {
+        if (message.Recipients.Count > 0)
+        {
+            return;
+        }
+
+        var fallback = new List<PstRecipient>();
+        AppendRecipientsFromDisplay(fallback, message.DisplayTo, (int)PstRecipientType.To);
+        AppendRecipientsFromDisplay(fallback, message.DisplayCc, (int)PstRecipientType.Cc);
+        AppendRecipientsFromDisplay(fallback, message.DisplayBcc, (int)PstRecipientType.Bcc);
+
+        if (fallback.Count > 0)
+        {
+            message.Recipients = fallback;
+        }
+    }
+
+    /// <summary>
+    /// Menambahkan recipient hasil parsing display string ke daftar fallback.
+    /// </summary>
+    /// <param name="target">Daftar recipient fallback.</param>
+    /// <param name="displayValue">String display recipient.</param>
+    /// <param name="recipientType">Jenis recipient (To/Cc/Bcc).</param>
+    private static void AppendRecipientsFromDisplay(List<PstRecipient> target, string? displayValue, int recipientType)
+    {
+        if (string.IsNullOrWhiteSpace(displayValue))
+        {
+            return;
+        }
+
+        var tokens = displayValue.Split(new[] { ';', ',' }, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+        foreach (var token in tokens)
+        {
+            if (string.IsNullOrWhiteSpace(token))
+            {
+                continue;
+            }
+
+            target.Add(new PstRecipient
+            {
+                RecipientType = recipientType,
+                EmailAddress = token,
+                SmtpAddress = token,
+                DisplayName = token,
+                AddressType = "SMTP"
+            });
+        }
     }
 
     /// <summary>

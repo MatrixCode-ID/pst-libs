@@ -11,8 +11,9 @@ namespace Emcode.Pst.Infrastructure.Ndb;
 internal sealed class NdbHeaderWriter
 {
     private const uint SignatureMagic = 0x4E444221;
+    private const ushort UnicodeClientSignature = 0x4D53;
     private const ushort UnicodeVersion = 0x0017;
-    private const ushort UnicodeVersionMinor = 0x0000;
+    private const ushort UnicodeVersionMinor = 0x0013;
     private readonly Stream _stream;
     private const int UnicodeBidNextPOffset = 0x20;
     private const int UnicodeDwUniqueOffset = 0x28;
@@ -55,7 +56,7 @@ internal sealed class NdbHeaderWriter
     public static PstHeaderInfo InitializeEmptyHeader(
         Stream stream,
         PstFormat format = PstFormat.Unicode,
-        PstCryptMethod cryptMethod = PstCryptMethod.None)
+        PstCryptMethod cryptMethod = PstCryptMethod.Permute)
     {
         if (stream is null)
         {
@@ -77,9 +78,11 @@ internal sealed class NdbHeaderWriter
 
         var header = new byte[512];
         BitConverter.TryWriteBytes(header.AsSpan(0, 4), SignatureMagic);
-        BitConverter.TryWriteBytes(header.AsSpan(8, 2), (ushort)0);
+        BitConverter.TryWriteBytes(header.AsSpan(8, 2), UnicodeClientSignature);
         BitConverter.TryWriteBytes(header.AsSpan(10, 2), format == PstFormat.Unicode ? UnicodeVersion : (ushort)0x000E);
         BitConverter.TryWriteBytes(header.AsSpan(12, 2), UnicodeVersionMinor);
+        header[14] = 0x01;
+        header[15] = 0x01;
 
         stream.Seek(0, SeekOrigin.Begin);
         stream.Write(header, 0, header.Length);
@@ -91,7 +94,7 @@ internal sealed class NdbHeaderWriter
         stream.Flush();
         return new PstHeaderInfo(
             SignatureMagic,
-            clientSignature: 0,
+            clientSignature: UnicodeClientSignature,
             version: format == PstFormat.Unicode ? UnicodeVersion : (ushort)0x000E,
             versionMinor: UnicodeVersionMinor,
             fileSize: stream.Length,

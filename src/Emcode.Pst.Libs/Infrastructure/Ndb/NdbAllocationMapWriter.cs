@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using Emcode.Pst.Domain;
 
 namespace Emcode.Pst.Infrastructure.Ndb;
@@ -20,6 +21,60 @@ internal sealed class NdbAllocationMapWriter
     private readonly ulong _initialLastAmapOffset;
     private readonly Dictionary<ulong, byte[]> _amapPages = new();
     private ulong _effectiveLastAmapOffset;
+
+    /// <summary>
+    /// Membaca free-space dari AMap sebagai kandidat reusable range.
+    /// </summary>
+    /// <param name="stream">Stream PST sumber.</param>
+    /// <param name="initialLastAmapOffset">Nilai ROOT.ibAMapLast.</param>
+    /// <returns>Daftar range free-space berbasis granularitas 64-byte unit.</returns>
+    public static IReadOnlyList<NdbAllocationRange> ReadReusableFreeRanges(Stream stream, ulong initialLastAmapOffset)
+    {
+        ArgumentNullException.ThrowIfNull(stream);
+        if (!stream.CanRead || stream.Length <= 0 || initialLastAmapOffset < FirstAmapOffset)
+        {
+            return Array.Empty<NdbAllocationRange>();
+        }
+
+        var ranges = new List<NdbAllocationRange>();
+        var eof = (ulong)stream.Length;
+        var lastAmapOffset = Math.Min(initialLastAmapOffset, eof >= AmapPageSize ? eof - AmapPageSize : 0);
+        if (lastAmapOffset < FirstAmapOffset)
+        {
+            return Array.Empty<NdbAllocationRange>();
+        }
+
+        var page = new byte[AmapPageSize];
+        for (var mapOffset = FirstAmapOffset; mapOffset <= lastAmapOffset; mapOffset += AmapIntervalBytes)
+        {
+            if (mapOffset + AmapPageSize > eof)
+            {
+                break;
+            }
+
+            stream.Seek((long)mapOffset, SeekOrigin.Begin);
+            var read = 0;
+            while (read < page.Length)
+            {
+                var chunk = stream.Read(page, read, page.Length - read);
+                if (chunk == 0)
+                {
+                    break;
+                }
+
+                read += chunk;
+            }
+
+            if (read < page.Length)
+            {
+                break;
+            }
+
+            ExtractFreeRangesFromSection(ranges, mapOffset, page, eof);
+        }
+
+        return MergeRanges(ranges);
+    }
 
     /// <summary>
     /// Membuat writer AMap untuk stream PST tertentu.
@@ -235,6 +290,83 @@ internal sealed class NdbAllocationMapWriter
         }
 
         return count;
+    }
+
+    private static void ExtractFreeRangesFromSection(List<NdbAllocationRange> target, ulong sectionStart, byte[] page, ulong eof)
+    {
+        ulong? currentStart = null;
+        ulong currentLength = 0;
+        var maxBits = AmapDataBytes * 8;
+        for (var bit = 0; bit < maxBits; bit++)
+        {
+            var byteIndex = bit / 8;
+            var bitMask = 1 << (bit % 8);
+            var isAllocated = (page[byteIndex] & bitMask) != 0;
+            var unitOffset = sectionStart + ((ulong)bit * AmapUnitBytes);
+            if (unitOffset >= eof)
+            {
+                break;
+            }
+
+            var availableLength = Math.Min((ulong)AmapUnitBytes, eof - unitOffset);
+            if (availableLength == 0)
+            {
+                break;
+            }
+
+            if (!isAllocated)
+            {
+                if (currentStart is null)
+                {
+                    currentStart = unitOffset;
+                    currentLength = availableLength;
+                }
+                else
+                {
+                    currentLength += availableLength;
+                }
+            }
+            else if (currentStart.HasValue)
+            {
+                target.Add(new NdbAllocationRange(currentStart.Value, currentLength));
+                currentStart = null;
+                currentLength = 0;
+            }
+        }
+
+        if (currentStart.HasValue && currentLength > 0)
+        {
+            target.Add(new NdbAllocationRange(currentStart.Value, currentLength));
+        }
+    }
+
+    private static IReadOnlyList<NdbAllocationRange> MergeRanges(List<NdbAllocationRange> ranges)
+    {
+        if (ranges.Count <= 1)
+        {
+            return ranges;
+        }
+
+        var ordered = ranges.OrderBy(item => item.Offset).ToList();
+        var merged = new List<NdbAllocationRange>(ordered.Count);
+        var current = ordered[0];
+        for (var index = 1; index < ordered.Count; index++)
+        {
+            var next = ordered[index];
+            var currentEnd = current.Offset + current.Length;
+            if (next.Offset <= currentEnd)
+            {
+                var mergedEnd = Math.Max(currentEnd, next.Offset + next.Length);
+                current = new NdbAllocationRange(current.Offset, mergedEnd - current.Offset);
+                continue;
+            }
+
+            merged.Add(current);
+            current = next;
+        }
+
+        merged.Add(current);
+        return merged;
     }
 }
 

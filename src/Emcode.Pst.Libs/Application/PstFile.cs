@@ -119,6 +119,33 @@ public sealed class PstFile : IDisposable
     }
 
     /// <summary>
+    /// Menyimpan perubahan write ke media target secara eksplisit.
+    /// </summary>
+    public void Save()
+    {
+        if (_writer is null)
+        {
+            throw new NotSupportedException("Save is not available without a writer.");
+        }
+
+        _writer.Save();
+    }
+
+    /// <summary>
+    /// Menyimpan perubahan write ke media target secara eksplisit dan asynchronous.
+    /// </summary>
+    /// <param name="cancellationToken">Token pembatalan operasi.</param>
+    public Task SaveAsync(CancellationToken cancellationToken = default)
+    {
+        if (_writer is null)
+        {
+            throw new NotSupportedException("SaveAsync is not available without a writer.");
+        }
+
+        return _writer.SaveAsync(cancellationToken);
+    }
+
+    /// <summary>
     /// Membuat folder baru di PST dengan parent opsional.
     /// </summary>
     /// <param name="name">Nama folder baru.</param>
@@ -225,6 +252,37 @@ public sealed class PstFile : IDisposable
         }
 
         return _writer.ImportEmlAsync(folder, emlPath, cancellationToken);
+    }
+
+    /// <summary>
+    /// Memperbarui properti store PST (mis. nama dan komentar data file).
+    /// </summary>
+    /// <param name="draft">Draft properti store.</param>
+    public void UpdateStoreProperties(PstStorePropertiesDraft draft)
+    {
+        Guard.NotNull(draft, nameof(draft));
+        if (_writer is null)
+        {
+            throw new NotSupportedException("UpdateStoreProperties is not available without a writer.");
+        }
+
+        _writer.UpdateStoreProperties(draft);
+    }
+
+    /// <summary>
+    /// Memperbarui properti store PST secara asynchronous.
+    /// </summary>
+    /// <param name="draft">Draft properti store.</param>
+    /// <param name="cancellationToken">Token pembatalan operasi.</param>
+    public Task UpdateStorePropertiesAsync(PstStorePropertiesDraft draft, CancellationToken cancellationToken = default)
+    {
+        Guard.NotNull(draft, nameof(draft));
+        if (_writer is null)
+        {
+            throw new NotSupportedException("UpdateStorePropertiesAsync is not available without a writer.");
+        }
+
+        return _writer.UpdateStorePropertiesAsync(draft, cancellationToken);
     }
 
     /// <summary>

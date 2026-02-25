@@ -140,7 +140,12 @@ public sealed class NdbWriterTests
 
             var blockCounter = ResolveBidCounter(header.Counters.NextBlockBidRaw);
             var pageCounter = ResolveBidCounter(header.Counters.NextPageBidRaw);
-            var writer = new NdbWriter(stream, header.HeaderInfo, blockCounter, pageCounter);
+            var writer = new NdbWriter(
+                stream,
+                header.HeaderInfo,
+                initialBlockBidCounter: blockCounter,
+                initialPageBidCounter: pageCounter,
+                enableFreeSpaceReuse: false);
             var entry = writer.WriteExternalBlock(new byte[64]);
 
             stream.Seek(0xF8, SeekOrigin.Begin);

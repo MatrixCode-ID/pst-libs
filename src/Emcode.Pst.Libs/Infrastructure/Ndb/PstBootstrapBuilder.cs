@@ -24,7 +24,7 @@ internal sealed class PstBootstrapBuilder
     public void Build(
         Stream stream,
         PstFormat format = PstFormat.Unicode,
-        PstCryptMethod cryptMethod = PstCryptMethod.None)
+        PstCryptMethod cryptMethod = PstCryptMethod.Permute)
     {
         if (stream is null)
         {
@@ -54,7 +54,12 @@ internal sealed class PstBootstrapBuilder
 
         var blockCounter = ResolveBidCounter(header.Counters.NextBlockBidRaw);
         var pageCounter = ResolveBidCounter(header.Counters.NextPageBidRaw);
-        var writer = new NdbWriter(stream, headerInfo, blockCounter, pageCounter);
+        var writer = new NdbWriter(
+            stream,
+            headerInfo,
+            initialBlockBidCounter: blockCounter,
+            initialPageBidCounter: pageCounter,
+            enableFreeSpaceReuse: false);
         writer.CommitBtrees(
             header,
             new Dictionary<ulong, BbtEntry>(),
@@ -71,7 +76,7 @@ internal sealed class PstBootstrapBuilder
     public Task BuildAsync(
         Stream stream,
         PstFormat format = PstFormat.Unicode,
-        PstCryptMethod cryptMethod = PstCryptMethod.None,
+        PstCryptMethod cryptMethod = PstCryptMethod.Permute,
         CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();

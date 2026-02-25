@@ -10,6 +10,17 @@ namespace Emcode.Pst.Application.Abstractions;
 public interface IPstWriter
 {
     /// <summary>
+    /// Menyimpan perubahan write yang masih berada di memori ke media target.
+    /// </summary>
+    void Save();
+
+    /// <summary>
+    /// Menyimpan perubahan write yang masih berada di memori ke media target secara asynchronous.
+    /// </summary>
+    /// <param name="cancellationToken">Token pembatalan operasi.</param>
+    Task SaveAsync(CancellationToken cancellationToken = default);
+
+    /// <summary>
     /// Membuat folder baru pada PST.
     /// </summary>
     /// <param name="name">Nama folder baru.</param>
@@ -59,6 +70,19 @@ public interface IPstWriter
     /// <param name="cancellationToken">Token pembatalan operasi.</param>
     /// <returns>Pesan yang dibuat.</returns>
     Task<PstMessage> ImportEmlAsync(PstFolder folder, string emlPath, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Memperbarui properti store PST (mis. nama dan komentar data file).
+    /// </summary>
+    /// <param name="draft">Draft properti store yang akan diperbarui.</param>
+    void UpdateStoreProperties(PstStorePropertiesDraft draft);
+
+    /// <summary>
+    /// Memperbarui properti store PST secara asynchronous.
+    /// </summary>
+    /// <param name="draft">Draft properti store yang akan diperbarui.</param>
+    /// <param name="cancellationToken">Token pembatalan operasi.</param>
+    Task UpdateStorePropertiesAsync(PstStorePropertiesDraft draft, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Memperbarui pesan yang sudah ada.

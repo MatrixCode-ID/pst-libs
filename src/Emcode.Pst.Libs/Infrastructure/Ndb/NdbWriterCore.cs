@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Emcode.Pst.Domain;
@@ -19,6 +20,8 @@ internal sealed class NdbWriterCore
     private readonly ushort _pageSize;
     private readonly ushort _blockTrailerSize;
     private readonly List<NdbAllocationRange> _allocationRanges = new();
+    private readonly List<NdbAllocationRange> _freeRanges;
+    private readonly List<NdbAllocationRange> _occupiedRanges;
     private long _nextOffset;
     private long _blockBidCounter;
     private long _pageBidCounter;
@@ -30,11 +33,15 @@ internal sealed class NdbWriterCore
     /// <param name="initialOffset">Offset awal untuk alokasi block; default dari ukuran file.</param>
     /// <param name="initialBlockBidCounter">Counter awal BID block (untuk melanjutkan alokasi).</param>
     /// <param name="initialPageBidCounter">Counter awal BID page (untuk melanjutkan alokasi).</param>
+    /// <param name="freeRanges">Kandidat free-space reusable.</param>
+    /// <param name="occupiedRanges">Range terpakai yang harus dihindari ketika reuse.</param>
     public NdbWriterCore(
         PstHeaderInfo headerInfo,
         ulong? initialOffset = null,
         ulong? initialBlockBidCounter = null,
-        ulong? initialPageBidCounter = null)
+        ulong? initialPageBidCounter = null,
+        IReadOnlyList<NdbAllocationRange>? freeRanges = null,
+        IReadOnlyList<NdbAllocationRange>? occupiedRanges = null)
     {
         ArgumentNullException.ThrowIfNull(headerInfo);
         if (headerInfo.Format == PstFormat.Unknown)
@@ -49,6 +56,8 @@ internal sealed class NdbWriterCore
         _nextOffset = (long)AlignToBlock(startOffset, _blockSize);
         _blockBidCounter = (long)(initialBlockBidCounter ?? 0);
         _pageBidCounter = (long)(initialPageBidCounter ?? initialBlockBidCounter ?? 0);
+        _freeRanges = NormalizeRanges(freeRanges);
+        _occupiedRanges = NormalizeRanges(occupiedRanges);
     }
 
     /// <summary>
@@ -121,9 +130,7 @@ internal sealed class NdbWriterCore
         lock (_sync)
         {
             var bid = AllocatePageBid();
-            var alignedOffset = ResolveAllocationOffset((ulong)_nextOffset, _pageSize, _pageSize);
-            var ib = alignedOffset;
-            _nextOffset = (long)(alignedOffset + _pageSize);
+            var ib = AllocateOffset(_pageSize, _pageSize);
             var allocation = new NdbBlockAllocation(bid, ib, _pageSize, _pageSize, isInternal: false);
             _allocationRanges.Add(new NdbAllocationRange(allocation.Ib, allocation.BlockSize));
             return allocation;
@@ -169,13 +176,23 @@ internal sealed class NdbWriterCore
         lock (_sync)
         {
             var bid = AllocateBid(isInternal);
-            var alignedOffset = ResolveAllocationOffset((ulong)_nextOffset, _blockSize, _blockSize);
-            var ib = alignedOffset;
-            _nextOffset = (long)(alignedOffset + _blockSize);
+            var ib = AllocateOffset(_blockSize, _blockSize);
             var allocation = new NdbBlockAllocation(bid, ib, dataSize, _blockSize, isInternal);
             _allocationRanges.Add(new NdbAllocationRange(allocation.Ib, allocation.BlockSize));
             return allocation;
         }
+    }
+
+    private ulong AllocateOffset(ushort alignment, ushort allocationSize)
+    {
+        if (TryAllocateFromFreeRanges(alignment, allocationSize, out var reusedOffset))
+        {
+            return reusedOffset;
+        }
+
+        var alignedOffset = ResolveAllocationOffset((ulong)_nextOffset, alignment, allocationSize);
+        _nextOffset = (long)(alignedOffset + allocationSize);
+        return alignedOffset;
     }
 
     private Bid AllocateBid(bool isInternal)
@@ -296,5 +313,120 @@ internal sealed class NdbWriterCore
 
             return candidate;
         }
+    }
+
+    private bool TryAllocateFromFreeRanges(ushort alignment, ushort allocationSize, out ulong offset)
+    {
+        for (var index = 0; index < _freeRanges.Count; index++)
+        {
+            var range = _freeRanges[index];
+            if (range.Length < allocationSize)
+            {
+                continue;
+            }
+
+            var rangeEnd = range.Offset + range.Length;
+            var candidate = AlignToBlock(range.Offset, alignment);
+            while (candidate + allocationSize <= rangeEnd)
+            {
+                var resolved = ResolveAllocationOffset(candidate, alignment, allocationSize);
+                if (resolved + allocationSize > rangeEnd)
+                {
+                    break;
+                }
+
+                if (IsOverlappingOccupied(resolved, allocationSize))
+                {
+                    candidate = AlignToBlock(resolved + alignment, alignment);
+                    continue;
+                }
+
+                ConsumeFreeRange(index, resolved, allocationSize);
+                offset = resolved;
+                return true;
+            }
+        }
+
+        offset = 0;
+        return false;
+    }
+
+    private bool IsOverlappingOccupied(ulong offset, ulong length)
+    {
+        var end = offset + length;
+        foreach (var occupied in _occupiedRanges)
+        {
+            var occupiedEnd = occupied.Offset + occupied.Length;
+            if (offset < occupiedEnd && end > occupied.Offset)
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private void ConsumeFreeRange(int index, ulong offset, ulong length)
+    {
+        var source = _freeRanges[index];
+        var sourceEnd = source.Offset + source.Length;
+        var usedEnd = offset + length;
+        if (offset <= source.Offset && usedEnd >= sourceEnd)
+        {
+            _freeRanges.RemoveAt(index);
+            return;
+        }
+
+        if (offset <= source.Offset)
+        {
+            _freeRanges[index] = new NdbAllocationRange(usedEnd, sourceEnd - usedEnd);
+            return;
+        }
+
+        if (usedEnd >= sourceEnd)
+        {
+            _freeRanges[index] = new NdbAllocationRange(source.Offset, offset - source.Offset);
+            return;
+        }
+
+        _freeRanges[index] = new NdbAllocationRange(source.Offset, offset - source.Offset);
+        _freeRanges.Insert(index + 1, new NdbAllocationRange(usedEnd, sourceEnd - usedEnd));
+    }
+
+    private static List<NdbAllocationRange> NormalizeRanges(IReadOnlyList<NdbAllocationRange>? ranges)
+    {
+        if (ranges is null || ranges.Count == 0)
+        {
+            return new List<NdbAllocationRange>();
+        }
+
+        var ordered = ranges
+            .Where(item => item.Length > 0)
+            .OrderBy(item => item.Offset)
+            .ToList();
+        if (ordered.Count == 0)
+        {
+            return new List<NdbAllocationRange>();
+        }
+
+        var merged = new List<NdbAllocationRange>(ordered.Count);
+        var current = ordered[0];
+        for (var index = 1; index < ordered.Count; index++)
+        {
+            var next = ordered[index];
+            var currentEnd = current.Offset + current.Length;
+            if (next.Offset <= currentEnd)
+            {
+                var mergedEnd = Math.Max(currentEnd, next.Offset + next.Length);
+                current = new NdbAllocationRange(current.Offset, mergedEnd - current.Offset);
+                continue;
+            }
+
+            merged.Add(current);
+            current = next;
+        }
+
+        merged.Add(current);
+        return merged;
     }
 }
