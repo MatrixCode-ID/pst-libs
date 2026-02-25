@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using Emcode.Pst.Application.Abstractions;
 using Emcode.Pst.Domain;
 using Emcode.Pst.Infrastructure;
+using Emcode.Pst.Infrastructure.Ndb;
 using Emcode.Pst.Shared;
 
 namespace Emcode.Pst.Application;
@@ -82,6 +83,32 @@ public sealed class PstFile : IDisposable
     }
 
     /// <summary>
+    /// Membuat file PST baru pada path target lalu langsung membukanya untuk operasi read/write.
+    /// </summary>
+    /// <param name="path">Path file PST baru.</param>
+    /// <param name="options">Opsi pembukaan PST.</param>
+    /// <param name="reader">Reader untuk memuat struktur PST.</param>
+    /// <param name="writer">Writer untuk operasi write.</param>
+    /// <returns>Instance <see cref="PstFile"/> yang siap digunakan.</returns>
+    public static PstFile Create(string path, PstOpenOptions? options = null, IPstReader? reader = null, IPstWriter? writer = null)
+    {
+        Guard.NotNullOrWhiteSpace(path, nameof(path));
+        if (File.Exists(path))
+        {
+            throw new IOException($"File PST sudah ada di path '{path}'.");
+        }
+
+        options ??= new PstOpenOptions { ReadOnly = false, ValidateChecksums = false };
+        if (options.ReadOnly)
+        {
+            throw new NotSupportedException("Create membutuhkan opsi ReadOnly = false.");
+        }
+
+        PstNdbFileCreator.CreateMinimal(path);
+        return Open(path, options, reader, writer ?? new PstNdbWriter());
+    }
+
+    /// <summary>
     /// Membuka file PST secara asynchronous dengan reader dan writer opsional.
     /// </summary>
     /// <param name="path">Path file PST.</param>
@@ -113,6 +140,39 @@ public sealed class PstFile : IDisposable
                 .ConfigureAwait(false);
         }
         return pst;
+    }
+
+    /// <summary>
+    /// Membuat file PST baru pada path target lalu langsung membukanya untuk operasi read/write secara asynchronous.
+    /// </summary>
+    /// <param name="path">Path file PST baru.</param>
+    /// <param name="options">Opsi pembukaan PST.</param>
+    /// <param name="reader">Reader untuk memuat struktur PST.</param>
+    /// <param name="writer">Writer untuk operasi write.</param>
+    /// <param name="cancellationToken">Token pembatalan operasi.</param>
+    /// <returns>Instance <see cref="PstFile"/> yang siap digunakan.</returns>
+    public static async Task<PstFile> CreateAsync(
+        string path,
+        PstOpenOptions? options = null,
+        IPstReader? reader = null,
+        IPstWriter? writer = null,
+        CancellationToken cancellationToken = default)
+    {
+        Guard.NotNullOrWhiteSpace(path, nameof(path));
+        cancellationToken.ThrowIfCancellationRequested();
+        if (File.Exists(path))
+        {
+            throw new IOException($"File PST sudah ada di path '{path}'.");
+        }
+
+        options ??= new PstOpenOptions { ReadOnly = false, ValidateChecksums = false };
+        if (options.ReadOnly)
+        {
+            throw new NotSupportedException("CreateAsync membutuhkan opsi ReadOnly = false.");
+        }
+
+        await PstNdbFileCreator.CreateMinimalAsync(path, cancellationToken).ConfigureAwait(false);
+        return await OpenAsync(path, options, reader, writer ?? new PstNdbWriter(), cancellationToken).ConfigureAwait(false);
     }
 
     /// <summary>

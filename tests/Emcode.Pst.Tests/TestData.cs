@@ -24,4 +24,16 @@ public static class TestData
             return path;
         }
     }
+
+    /// <summary>
+    /// Path absolut untuk artifacts/Output.pst sebagai output uji kustom.
+    /// </summary>
+    public static string OutputPath
+    {
+        get
+        {
+            var baseDir = AppContext.BaseDirectory;
+            return Path.GetFullPath(Path.Combine(baseDir, "..", "..", "..", "..", "..", "artifacts", "Output.pst"));
+        }
+    }
 }

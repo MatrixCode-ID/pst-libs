@@ -1,3 +1,120 @@
+## Laporan 165 — 25 Feb 2026, 08:31
+Tanggal laporan: 25 Feb 2026, 08:31
+
+**Ringkasan Pertanyaan**
+Meminta menjalankan Plan 62: ubah logic `SampleTest_ShouldCreateFolderAndMessageInOutputPst` agar file output dibuat via API (bukan copy baseline), sekaligus dukungan `CreateAsync`.
+
+**Statement Jawaban**
+Plan 62 sudah dieksekusi.
+
+Perubahan implementasi:
+- Menambahkan helper internal pembuat PST minimal di library:
+  - `PstNdbFileCreator.CreateMinimal(...)`
+  - `PstNdbFileCreator.CreateMinimalAsync(..., CancellationToken)`
+- Menambahkan API baru pada facade:
+  - `PstFile.Create(...)`
+  - `PstFile.CreateAsync(..., CancellationToken)`
+  Kedua API membuat file PST baru lalu membuka instance siap write.
+- Mengubah `SampleTest_ShouldCreateFolderAndMessageInOutputPst`:
+  - tidak lagi copy baseline;
+  - membuat `artifacts/Output.pst` melalui `PstFile.Create(...)` saat awal test.
+- Menambahkan test async:
+  - `SampleTest_ShouldCreateOutputPstViaCreateAsync_WhenMissing`
+  untuk verifikasi jalur `CreateAsync`.
+
+Hasil verifikasi:
+- `dotnet test tests/Emcode.Pst.Tests/Emcode.Pst.Tests.csproj -c Release --filter "Emcode.Pst.Tests.CustomTest"`
+- Lulus: 2 passed, 0 failed.
+
+**File Terkait**
+- src/Emcode.Pst.Libs/Application/PstFile.cs
+- src/Emcode.Pst.Libs/Infrastructure/Ndb/PstNdbFileCreator.cs
+- tests/Emcode.Pst.Tests/CustomTest.cs
+- CodexReport.md
+
+## Laporan 164 — 25 Feb 2026, 08:24
+Tanggal laporan: 25 Feb 2026, 08:24
+
+**Ringkasan Pertanyaan**
+Meminta Plan 62 juga mencakup `CreateAsync`.
+
+**Statement Jawaban**
+Plan 62 sudah diperbarui agar mencakup pembuatan PST baru via API sinkron dan asinkron:
+- `PstFile.Create(...)`
+- `PstFile.CreateAsync(..., CancellationToken cancellationToken = default)`
+
+Penyesuaian plan juga mencakup validasi jalur async pada implementasi create file baru.
+
+**File Terkait**
+- RefactorPlan.md
+- CodexReport.md
+
+## Laporan 163 — 25 Feb 2026, 08:21
+Tanggal laporan: 25 Feb 2026, 08:21
+
+**Ringkasan Pertanyaan**
+Meminta update logic `SampleTest_ShouldCreateFolderAndMessageInOutputPst` agar `artifacts/output.pst` dibuat menggunakan API, bukan copy dari baseline.
+
+**Statement Jawaban**
+Saya sudah analisis constraint implementasi saat ini: writer NDB masih mengharuskan file existing (`FileMode.Open`), sehingga agar sesuai permintaan perlu ditambah API create PST baru di library.
+
+Saya sudah menyiapkan **Plan 62** di `RefactorPlan.md` dengan langkah:
+- tambah API create PST baru di library,
+- sesuaikan inisialisasi writer untuk file baru,
+- update test custom agar create via API saat output belum ada,
+- verifikasi dengan test target.
+
+Status saat ini: menunggu perintah Anda untuk eksekusi Plan 62.
+
+**File Terkait**
+- RefactorPlan.md
+- CodexReport.md
+
+## Laporan 162 — 25 Feb 2026, 08:10
+Tanggal laporan: 25 Feb 2026, 08:10
+
+**Ringkasan Pertanyaan**
+Meminta perbaikan test `SampleTest_ShouldCreateFolderAndMessageInOutputPst` karena output path belum ada, agar test membuat output baru otomatis.
+
+**Statement Jawaban**
+Saya sudah analisis penyebab gagal test dan menyiapkan plan perubahan sebagai **Plan 61** di `RefactorPlan.md`.
+
+Inti rencana:
+- Hilangkan asumsi bahwa file sumber `output.pst` selalu ada.
+- Saat `artifacts/Output.pst` belum ada, test akan membuat file output dari base PST yang valid (`TestData.SamplePath`) dan memastikan folder output tersedia.
+- Setelah itu test tetap menjalankan flow existing (create folder/message + verifikasi reopen).
+
+Status saat ini: menunggu perintah Anda untuk eksekusi plan sesuai aturan refactor project.
+
+**File Terkait**
+- RefactorPlan.md
+- CodexReport.md
+
+## Laporan 161 — 25 Feb 2026, 08:00
+Tanggal laporan: 25 Feb 2026, 08:00
+
+**Ringkasan Pertanyaan**
+Meminta update SampleTest di `tests/Emcode.Pst.Tests/CustomTest.cs` dan membuat file PST baru di `artifacts/Output.pst`.
+
+**Statement Jawaban**
+SampleTest berhasil ditulis dan diverifikasi. File PST `artifacts/Output.pst` berhasil dibuat dan dimodifikasi melalui test.
+
+Detail implementasi:
+- `TestData.cs` ditambahkan property `OutputPath` yang menunjuk ke `artifacts/Output.pst`.
+- `CustomTest.cs` ditulis dengan satu test `SampleTest_ShouldCreateFolderAndMessageInOutputPst` yang:
+  - Membuka `artifacts/Output.pst` menggunakan `PstNdbWriter` (write mode).
+  - Membuat folder baru dengan nama unik di bawah folder root PST.
+  - Membuat pesan baru (`IPM.Note`) dengan subject, body, recipient, dan attachment.
+  - Memverifikasi ulang dengan membuka kembali PST dalam mode read-only.
+  - Memastikan folder, pesan, body, message class, flag attachment, dan isi attachment sesuai.
+- Test dijalankan dan **Passed** (1/1).
+
+**File Terkait**
+- `tests/Emcode.Pst.Tests/CustomTest.cs` (dibuat)
+- `tests/Emcode.Pst.Tests/TestData.cs` (diubah — tambah `OutputPath`)
+- `artifacts/Output.pst` (dimodifikasi oleh test)
+- `CodexReport.md`
+
 ## Laporan 160 — 24 Feb 2026, 11:17
 Tanggal laporan: 24 Feb 2026, 11:17
 

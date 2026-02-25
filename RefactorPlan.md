@@ -1,3 +1,59 @@
+## Plan 62 — 25 Feb 2026, 08:21
+Tanggal plan: 25 Feb 2026, 08:21
+
+**Ringkasan**
+Mengubah alur `SampleTest_ShouldCreateFolderAndMessageInOutputPst` agar file `artifacts/output.pst` dibuat menggunakan API library (`Create`/`CreateAsync`), tanpa copy baseline PST.
+
+**Sumber**
+- Permintaan user untuk update logic test agar create output via API — 25 Feb 2026
+
+**Lingkup**
+- src/Emcode.Pst.Libs/Application/PstFile.cs
+- src/Emcode.Pst.Libs/Infrastructure/Ndb/PstNdbWriter.cs
+- tests/Emcode.Pst.Tests/CustomTest.cs
+
+**Rencana Prioritas**
+1. Tambahkan API pembuatan PST baru pada library:
+   - `PstFile.Create(...)`
+   - `PstFile.CreateAsync(..., CancellationToken cancellationToken = default)`
+   yang menghasilkan file PST minimal valid.
+2. Update `PstNdbWriter` agar bisa inisialisasi terhadap PST baru yang dibuat API (bukan hanya `FileMode.Open` file existing).
+3. Ubah `CustomTest`:
+   - jika `artifacts/Output.pst` belum ada, buat menggunakan API baru;
+   - lanjutkan create folder/message seperti flow existing.
+4. Tambahkan/validasi jalur async minimal untuk create file baru.
+5. Jalankan test target untuk verifikasi end-to-end.
+
+**Kriteria Selesai**
+- `SampleTest_ShouldCreateFolderAndMessageInOutputPst` tidak bergantung copy baseline.
+- `artifacts/Output.pst` dibuat via API library (`Create`/`CreateAsync`) ketika belum ada.
+- Test target lulus.
+
+## Plan 61 — 25 Feb 2026, 08:10
+Tanggal plan: 25 Feb 2026, 08:10
+
+**Ringkasan**
+Memperbaiki test `SampleTest_ShouldCreateFolderAndMessageInOutputPst` agar otomatis membuat file output PST saat path output belum ada.
+
+**Sumber**
+- Permintaan user untuk memperbaiki test karena output path tidak ada — 25 Feb 2026
+
+**Lingkup**
+- tests/Emcode.Pst.Tests/CustomTest.cs
+
+**Rencana Prioritas**
+1. Ubah inisialisasi file output pada test agar tidak mengasumsikan `output.pst` sudah ada.
+2. Jika `artifacts/Output.pst` belum ada:
+   - Gunakan base PST yang tersedia dari test data (misalnya `TestData.SamplePath`) sebagai sumber copy.
+   - Pastikan folder `artifacts` dibuat bila belum ada.
+3. Pertahankan behavior test existing (buat folder, buat message, verifikasi hasil reopen).
+4. Jalankan test target untuk memastikan skenario output-missing sudah tertangani.
+
+**Kriteria Selesai**
+- Test tidak gagal lagi saat `artifacts/Output.pst` belum ada.
+- File output dibuat otomatis sebelum proses write.
+- `SampleTest_ShouldCreateFolderAndMessageInOutputPst` lulus.
+
 ## Plan 60 — 24 Feb 2026, 11:12
 Tanggal plan: 24 Feb 2026, 11:12
 
